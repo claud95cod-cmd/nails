@@ -1,0 +1,40 @@
+
+.profile-page {
+  --ink: var(--profile-ink);
+  color: var(--profile-ink);
+  background: var(--profile-bg);
+  padding: clamp(.85rem, 3vw, 1.75rem);
+  border-radius: 1.4rem;
+  overflow-wrap: anywhere;
+}
+.profile-page[data-fonts="modern"] :is(h1,h2,h3) {font-family: system-ui, sans-serif; font-weight: 650}
+.profile-page[data-fonts="classic"] {font-family: Arial, sans-serif}
+.profile-page [hidden] {display: none!important}
+.profile-page .profile-intro {padding: 0; overflow: hidden; color: inherit; background: transparent; border: 1px solid currentColor}
+.profile-cover {display: block; width: 100%; height: auto; aspect-ratio: 2 / 1; object-fit: cover}
+.profile-avatar {display: block; width: 4rem; height: 4rem; object-fit: cover; border-radius: 50%; margin-bottom: .75rem}
+.profile-identification {padding: clamp(1rem, 5vw, 2.5rem)}
+.profile-identification p {margin: .55rem 0}
+.profile-identification .button {margin-top: .7rem}
+.profile-description {white-space: pre-line}
+.profile-page :is(section,footer) {border-bottom: 1px solid color-mix(in srgb, currentColor 25%, transparent)}
+.profile-page :is(.button,button) {background: var(--profile-accent); color: var(--profile-on-accent)}
+.profile-page .profile-contacts a {color: inherit}
+.profile-contacts {display: flex; flex-wrap: wrap; gap: .7rem 1.25rem}
+.service-list {display: flex; flex-wrap: wrap; gap: .6rem}
+.service-list button {text-align: left}
+.service-list button[aria-pressed="true"] {outline: 2px solid var(--profile-ink); outline-offset: 2px}
+.profile-page #extras {border: 0; padding: 0; margin: 0 0 1rem}
+.profile-page input {color: #30252c}
+.profile-page .calendar {--ink: #30252c; color: var(--ink)}
+.profile-page :is(#slots,.dates) button {color: #30252c; background: #fff}
+.profile-page #slots button:disabled {background: #eee8ea; color: #665a61}
+.profile-page :is(#slots,.dates) [aria-pressed="true"] {color: var(--profile-on-accent); background: var(--profile-accent)}
+.portfolio-strip {display: flex; gap: .8rem; overflow-x: auto; scroll-snap-type: x proximity; padding: .35rem .25rem .8rem}
+.portfolio-strip figure {flex: 0 0 min(62%, 13rem); scroll-snap-align: start; margin: 0}
+.portfolio-strip button {display: block; width: 100%; overflow: hidden; padding: 0; border-radius: .8rem}
+.portfolio-strip img {display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover}
+.portfolio-strip figcaption {margin-top: .35rem}
+#work-dialog {max-width: min(38rem, 94vw); max-height: 92dvh; color: var(--profile-ink); background: var(--profile-bg); border: 0; border-radius: 1rem; padding: .9rem}
+#work-dialog::backdrop {background: rgb(0 0 0 / .75)}
+#work-large {display: block; width: 100%; max-height: 64dvh; object-fit: contain; margin: .7rem 0}

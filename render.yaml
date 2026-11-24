@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: master-booking
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port "$PORT" --no-access-log
+    healthCheckPath: /healthz
+    envVars:
+      - key: MEDIA_STORAGE
+        value: postgres
+      - key: DATABASE_URL
+        sync: false
+      - key: ADMIN_HASH
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+      - key: VAPID_EMAIL
+        sync: false
+      - key: VAPID_PUBLIC
+        sync: false
+      - key: VAPID_PRIVATE
+        sync: false

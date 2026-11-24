@@ -1,0 +1,11 @@
+.local/
+.venv/
+.env
+.env.*
+!.env.example
+__pycache__/
+.pytest_cache/
+.agents/skills/shadcn/
+.agents/skills/ui-ux-pro-max/
+instances/
+media/

@@ -1,0 +1,33 @@
+name: nail-studio
+x-app: &app
+  build: .
+  image: ${APP_IMAGE:-nail-studio:local}
+  env_file: ${INSTANCE_ENV:-.env}
+  environment:
+    MEDIA_DIR: /var/lib/booking-media
+    DATABASE_URL: ${DATABASE_URL:-postgresql://master:${POSTGRES_PASSWORD:?}@db/master}
+  restart: unless-stopped
+services:
+  db:
+    image: postgres:17
+    profiles: [local]
+    environment:
+      POSTGRES_DB: master
+      POSTGRES_USER: master
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [database:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U master -d master"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  web:
+    <<: *app
+    ports: ["127.0.0.1:${PORT:-8000}:8000"]
+    volumes: [media:/var/lib/booking-media]
+  worker:
+    <<: *app
+    command: ["python","-m","push"]
+volumes:
+  database:
+  media:

@@ -1,0 +1,61 @@
+{
+  "profile": {
+    "name": "Студия Ивы",
+    "specialty": "Наращивание и ламинирование ресниц",
+    "tagline": "Натуральный изгиб и лёгкий объём",
+    "description": "Принимаю по предварительной записи. Подбираю изгиб и объём под ваши черты и пожелания.",
+    "phone": "+70000000015",
+    "links": [
+      {
+        "title": "Страница студии",
+        "url": "https://example.org/iva-studio"
+      }
+    ],
+    "address": "Астрахань, ул. Сиреневая, 12",
+    "directions": "Вход со стороны сквера, второй этаж",
+    "timezone": "Europe/Astrakhan",
+    "accent": "#40365e",
+    "background": "#f0edf7",
+    "fonts": "modern",
+    "cover": "photos/lashes.webp",
+    "cover_x": 70,
+    "cover_y": 44
+  },
+  "services": [
+    {
+      "category": "Ресницы",
+      "title": "Классическое наращивание",
+      "price": 2600,
+      "minutes": 105,
+      "instructions": "Приходите без туши и макияжа глаз.",
+      "position": 10,
+      "addons": [
+        {
+          "title": "Снятие наращивания",
+          "price": 400,
+          "minutes": 15
+        },
+        {
+          "title": "Очищение ресниц",
+          "price": 200,
+          "minutes": 10
+        }
+      ]
+    },
+    {
+      "category": "Ресницы",
+      "title": "Ламинирование ресниц",
+      "price": 2200,
+      "minutes": 70,
+      "position": 20
+    }
+  ],
+  "portfolio": [
+    {
+      "image": "photos/lashes.webp",
+      "caption": "Классика с натуральным изгибом",
+      "position": 10,
+      "service": 1
+    }
+  ]
+}
