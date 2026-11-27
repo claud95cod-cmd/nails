@@ -79,7 +79,7 @@ def import_starter(config):
             OR EXISTS (SELECT 1 FROM subscriptions) OR EXISTS (SELECT 1 FROM events)
             OR EXISTS (SELECT 1 FROM breaks) OR EXISTS (SELECT 1 FROM week_hours)
             OR EXISTS (SELECT 1 FROM exceptions)
-            OR step <> 60 OR horizon <> 30 AS occupied FROM profile WHERE id=1""").fetchone()
+            OR step <> 60 OR horizon <> 30 OR lead_hours <> 0 AS occupied FROM profile WHERE id=1""").fetchone()
         if not row or row["occupied"]:
             raise ValueError("Импорт доступен только для пустого экземпляра")
         for key, variants in prepared.items():

@@ -1,3 +1,4 @@
+from main import PRIVACY_VERSION
 import os
 import uuid
 from datetime import datetime, timedelta
@@ -66,7 +67,27 @@ def test_block_races_with_online_booking(c):
         barrier.wait()
         if kind=="break":
             return c.post("/admin/rules",json=dict(kind="break",day=day,opens="10:30",closes="11:30")).status_code
-        return c.post("/book",json=dict(name="Проверка",phone="+70000000001",price=2000,
+        return c.post("/book",json=dict(consent_version=PRIVACY_VERSION,name="Проверка",phone="+70000000001",price=2000,
             starts=slot,request_id=str(uuid.uuid4()))).status_code
     with ThreadPoolExecutor(2) as executor:
         assert sorted(executor.map(write,["break","visit"]))==[200,409]
+
+
+def test_prebooking_and_batch(c):
+    slot = c.get("/slots").json()["times"][0]
+    day = slot[:10]
+    def apply(*edits):
+        return c.post("/admin/schedule-changes", json={"day":day, "edits":list(edits)})
+    def setting(hours):
+        return dict(day=day, kind="settings", step=60, horizon=30, lead_hours=hours)
+    assert apply(setting(168), dict(day=day, kind="date", opens="18:00", closes="10:00")).status_code == 422
+    assert slot in c.get("/slots").json()["times"]
+    try:
+        assert apply(setting(168)).is_success
+        assert slot not in c.get("/slots").json()["times"]
+        assert slot in c.get("/admin/slots").json()["times"]
+        result = c.post("/book",json=dict(consent_version=PRIVACY_VERSION,name="Клиент",phone="+70000000011",price=2000,
+            starts=slot,request_id=str(uuid.uuid4())))
+        assert result.status_code == 409
+    finally:
+        assert apply(setting(0)).is_success

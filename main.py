@@ -5,7 +5,9 @@ import os
 import re
 import secrets
 import uuid
+from calendar import monthrange
 from datetime import date, datetime, timedelta
+from itertools import groupby
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
@@ -20,10 +22,11 @@ from psycopg import Error as DatabaseError
 from psycopg.errors import ExclusionViolation
 from starlette.concurrency import run_in_threadpool
 
+from catalog import ProfileEdit, ServiceEdit, ServiceAction, change_service, save_profile_edit, save_service_edit, messenger
 from catalog import (ASSET_PATTERN, PHOTO_LIMIT, PortfolioItem, Profile, Service, database_media, foreground, media_root,
                      photo_variants, save_profile, save_service, save_work, services, store_photo)
 from configure import password_hash
-from schedule_admin import ScheduleRule, save_rule, visit_options, change_visit
+from schedule_admin import ScheduleChanges, save_changes, ScheduleRule, save_rule, visit_options, change_visit
 from push import deliver_one, enqueue
 from storage import ROOT, connect
 from calendar_service import available, timeline, lock, quote, rules, day_hours
@@ -32,15 +35,20 @@ app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 app.mount("/assets", StaticFiles(directory=ROOT/"static"), name="assets")
 pages = Jinja2Templates(directory=ROOT/"templates")
 pages.env.globals["foreground"] = foreground
+PRIVACY_VERSION = "demo-2026-11-27"
+pages.env.globals["privacy_version"] = PRIVACY_VERSION
 
 
 @app.middleware("http")
 async def headers(request, call_next):
-    if request.method == "POST" and request.url.path != "/jobs/push":
-        origin = request.headers.get("origin", "")
-        if not origin or urlsplit(origin).netloc != request.headers.get("host") or not origin.startswith(("https://","http://")):
-            return JSONResponse({"detail":"Обновите страницу"},403)
-    response = await call_next(request)
+    if (request.url.path == "/admin" or request.url.path.startswith("/admin/")) and os.getenv("MASTER_CABINET_ENABLED", "1") != "1":
+        response = JSONResponse({"detail": "Кабинет мастера временно недоступен"}, 404)
+    else:
+        if request.method == "POST" and request.url.path != "/jobs/push":
+            origin = request.headers.get("origin", "")
+            if not origin or urlsplit(origin).netloc != request.headers.get("host") or not origin.startswith(("https://","http://")):
+                return JSONResponse({"detail":"Обновите страницу"},403)
+        response = await call_next(request)
     response.headers.update({"Cache-Control":"no-store", "Referrer-Policy":"no-referrer",
                              "X-Content-Type-Options":"nosniff","X-Frame-Options":"DENY"})
     return response
@@ -129,24 +137,55 @@ def home(request: Request):
         p = profile_data(db)
         items = services(db, visible=True)
         extras = db.execute("SELECT * FROM addons WHERE visible ORDER BY id").fetchall()
+        today = datetime.now(ZoneInfo(p["timezone"])).date().isoformat()
+        windows = available(public_timeline(db, p, items))[:6] if items and not manual else []
+        windows_by_day = [(day, list(starts)) for day, starts in groupby(windows, key=lambda start: start[:10])]
         works = [] if manual else db.execute("SELECT * FROM portfolio WHERE visible ORDER BY position,id").fetchall()
     groups = {}
     for service in items:
         groups.setdefault(service["category"], []).append(service)
-    return pages.TemplateResponse(request=request, name="home.html",
-        context=dict(p=p, groups=groups, items=items, extras=extras, works=works, manual=manual))
+    return pages.TemplateResponse(request=request, name="home.html" if manual else "storefront.html",
+        context=dict(p=p, groups=groups, items=items, extras=extras, works=works,
+                     manual=manual, today=today, windows_by_day=windows_by_day))
 
 
+def public_timeline(db, profile, items):
+    return timeline(db, profile, min(item["minutes"] for item in items), public=True)
+
+
+@app.get("/windows")
+def windows():
+    with connect() as db:
+        p = profile_data(db)
+        items = services(db, visible=True)
+        days = public_timeline(db, p, items) if items else {}
+        return dict(times=available(days), days={day: available({day: options}) for day, options in days.items()},
+                    today=datetime.now(ZoneInfo(p["timezone"])).date().isoformat())
+
+
+@app.get("/admin/slots")
 @app.get("/slots")
-def slots(addon: int | None = None, service: int | None = None, addons: list[int] = Query(default=[])):
+def slots(request: Request, addon: int | None = None, service: int | None = None, addons: list[int] = Query(default=[])):
     with connect() as db:
         p = profile_data(db)
         s = quote(db, selected_service(db, service), addon, addons)
-        days = timeline(db, p, s["minutes"])
+        manual = request.url.path.startswith("/admin/")
+        if manual:
+            require(request)
+        days = timeline(db, p, s["minutes"], public=not manual)
         return dict(times=available(days), days=days, price=s["price"], minutes=s["minutes"], title=s["title"])
 
 
+@app.get("/privacy")
+def privacy(request: Request):
+    with connect() as db:
+        profile = profile_data(db)
+    return pages.TemplateResponse(request=request, name="privacy.html", context={"p":profile})
+
+
 class Booking(BaseModel):
+    consent_version: str | None = Field(default=None,max_length=64)
+    comment: str = Field(default="",max_length=1000)
     name: str = Field(min_length=1,max_length=80)
     phone: str = Field(max_length=24)
     starts: AwareDatetime
@@ -168,7 +207,9 @@ def book(request: Request, form: Booking):
     phone = re.sub(r"[ ()\-]","",form.phone)
     if not re.fullmatch(r"\+?\d{10,15}",phone) or not form.name.strip():
         raise HTTPException(422,"Проверьте имя и телефон")
-    omitted = set()
+    omitted = {"consent_version"}
+    if not form.comment:
+        omitted.add("comment")
     if form.service is None:
         omitted.add("service")
     if not form.addons:
@@ -185,19 +226,22 @@ def book(request: Request, form: Booking):
                 if old["fingerprint"] != fingerprint:
                     raise HTTPException(409,"Условия изменены. Выберите время заново.")
                 return {"url":"/v/"+old["token"]}
+            if not manual and form.consent_version != PRIVACY_VERSION:
+                raise HTTPException(422,"Для записи подтвердите согласие на обработку персональных данных")
             p = profile_data(db)
             s = quote(db, selected_service(db, form.service), form.addon, form.addons)
             if s["price"] != form.price:
                 raise HTTPException(409,"Цена изменилась. Проверьте сумму и подтвердите снова.")
             if form.minutes is not None and form.minutes != s["minutes"]:
                 raise HTTPException(409,"Длительность изменилась. Проверьте время и подтвердите снова.")
-            if form.starts.isoformat() not in available(timeline(db,p,s["minutes"])):
+            if form.starts.isoformat() not in available(timeline(db,p,s["minutes"], public=not manual)):
                 raise HTTPException(409,"Это время уже недоступно. Выберите другое окно.")
             token, visit = secrets.token_urlsafe(32), uuid.uuid4()
-            db.execute("""INSERT INTO visits(id,request_id,fingerprint,token,name,phone,title,price,minutes,starts,ends,instructions,social)
-                          VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            db.execute("""INSERT INTO visits(id,request_id,fingerprint,token,name,phone,title,price,minutes,starts,ends,instructions,social,comment,consent_version,consented_at)
+                          VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                        (visit,form.request_id,fingerprint,token,form.name.strip(),phone,s["title"],s["price"],
-                        s["minutes"],form.starts,form.starts+timedelta(minutes=s["minutes"]),s["instructions"],form.social.strip()))
+                        s["minutes"],form.starts,form.starts+timedelta(minutes=s["minutes"]),s["instructions"],form.social.strip(),form.comment.strip(),
+                        None if manual else PRIVACY_VERSION,None if manual else datetime.now(ZoneInfo("UTC"))))
             local = form.starts.astimezone(ZoneInfo(p["timezone"]))
             if not manual:
                 enqueue(db,f"{s['title']} · {local:%d.%m %H:%M}",visit)
@@ -235,11 +279,14 @@ def admin(request: Request,visit: uuid.UUID|None=None, day: date|None=None, tab:
         if tab not in {"visits","schedule","settings"} or visit:
             tab="visits"
     return pages.TemplateResponse(request=request,name="admin.html",context=dict(rows=rows,day=day,z=z,pauses=pauses,weekly=weekly,exceptions=exceptions,quick=quick,week=week,tab=tab,p=p,
+        month_days=[day.replace(day=n) for n in range(1,monthrange(day.year, day.month)[1]+1)],
+        prior_month=(day.replace(day=1)-timedelta(days=1)).replace(day=1) if day>date(1,1,31) else None,
+        next_month=(day.replace(day=28)+timedelta(days=4)).replace(day=1) if day<date(9999,12,1) else None,
         visit=visit,public_key=os.environ["VAPID_PUBLIC"]))
 
 
 @app.get("/admin/content")
-def content(request: Request):
+def content(request: Request, day: date | None = None):
     if not authorized(request):
         return RedirectResponse("/admin")
     with connect() as db:
@@ -248,7 +295,58 @@ def content(request: Request):
         addons = db.execute("SELECT * FROM addons ORDER BY id").fetchall()
         works = db.execute("SELECT * FROM portfolio ORDER BY position,id").fetchall()
     return pages.TemplateResponse(request=request, name="content.html",
-        context=dict(p=profile, items=items, addons=addons, works=works))
+        context=dict(p=profile, items=items, addons=addons, works=works, contact=next((v["url"] for v in profile["links"] if messenger(v["url"])), ""), tab="content",day=day))
+
+
+def content_change(request, operation, *args):
+    require(request)
+    with connect() as db:
+        lock(db)
+        try:
+            return {"id": operation(db, *args)}
+        except ValueError as error:
+            from pydantic import ValidationError
+            if isinstance(error, ValidationError):
+                raise HTTPException(422, "Проверьте поля формы и формат телефона") from None
+            raise HTTPException(422, str(error)) from None
+
+
+@app.post("/admin/content/edit-profile")
+def edit_profile(request: Request, form: ProfileEdit):
+    return content_change(request, save_profile_edit, form)
+
+
+@app.post("/admin/content/edit-service")
+def edit_service(request: Request, form: ServiceEdit):
+    return content_change(request, save_service_edit, form)
+
+
+@app.post("/admin/content/service/{key}/action")
+def service_action(request: Request, key: int, form: ServiceAction):
+    return content_change(request, change_service, key, form)
+
+
+class WorkCaption(BaseModel):
+    caption: str = Field(max_length=250)
+
+
+@app.post("/admin/content/work/{key}/caption")
+def caption_work(request: Request, key: int, form: WorkCaption):
+    require(request)
+    with connect() as db:
+        lock(db)
+        if not db.execute("UPDATE portfolio SET caption=%s WHERE id=%s",(form.caption,key)).rowcount:
+            raise HTTPException(404,"Работа не найдена")
+    return {"ok":True}
+
+
+@app.post("/admin/content/work/{key}/delete")
+def delete_work(request: Request, key: int):
+    require(request)
+    with connect() as db:
+        lock(db)
+        db.execute("DELETE FROM portfolio WHERE id=%s",(key,))
+    return {"ok":True}
 
 
 @app.post("/admin/content/profile")
@@ -328,6 +426,13 @@ def photo(request: Request, key: str, size: str):
     if not path.is_file():
         raise HTTPException(404)
     return FileResponse(path, media_type="image/webp")
+
+
+@app.post("/admin/schedule-changes")
+def change_schedule(request: Request, form: ScheduleChanges):
+    require(request)
+    save_changes(form)
+    return {"ok": True}
 
 
 @app.post("/admin/rules")

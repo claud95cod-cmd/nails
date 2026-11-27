@@ -46,9 +46,9 @@ function render(){
   el('nearest').hidden=!!start || !nearest;
   el('nearest').onclick=()=>{selected=nearest;month=nearest.slice(0,7);render()};
   el('submit').disabled=!start;
-  if(!start){el('summary').textContent=nearest?'На этот день свободных окон нет.':'Свободных окон нет. Свяжитесь с мастером.';return}
+  if(!start){el('summary').textContent=nearest?'На этот день свободных окон нет.':'Свободных окон нет.';return}
   const end=new Date(Date.parse(start.slice(0,16)+'Z')+minutes*60000).toISOString().slice(11,16);
-  el('summary').textContent=[title,format(selected,{day:'numeric',month:'long'}),start.slice(11,16)+'–'+end,price+' ₽',el('booking').dataset.address].join(' · ');
+  el('summary').textContent=[title,format(selected,{day:'numeric',month:'long'}),start.slice(11,16)+'–'+end,price+' ₽'].join(' · ');
 }
 async function refresh(){
   const id=++generation;
@@ -56,7 +56,7 @@ async function refresh(){
   try{
     const params=new URLSearchParams({service});
     addons().forEach(id=>params.append('addons',id));
-    const r=await fetch('/slots?'+params);
+    const r=await fetch((manual ? '/admin/slots?' : '/slots?')+params);
     const data=await r.json();
     if(id!==generation)return;
     if(!r.ok)throw Error(data.detail);
@@ -70,7 +70,7 @@ for(const choice of choices){
     const next=Number(choice.dataset.service);
     if(service!==next){
       service=next;
-      selected='';start='';
+      selected=el('booking').dataset.day || '';start='';
       choices.forEach(item=>item.setAttribute('aria-pressed',item===choice));
       for(const label of extras){
         label.hidden=Number(label.dataset.forService)!==service;
@@ -103,7 +103,7 @@ form.onsubmit=async e=>{
     if(r.ok){location.assign(manual?'/admin?day='+selected:data.url);return}
     note.textContent=data.detail;
     if([404,409,422].includes(r.status)){if(r.status!==422)attempt=null;await refresh()}
-  }catch{note.textContent='Ответ не получен. После подключения нажмите «Записаться» ещё раз.'}
+  }catch{note.textContent='Ответ не получен. После подключения нажмите «Сохранить визит» ещё раз.'}
   finally{controls.forEach(control=>control.disabled=false);button.disabled=!start}
 };
 el('phone').oninput=()=>el('phone').setCustomValidity('');

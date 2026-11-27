@@ -58,3 +58,9 @@ CREATE TABLE IF NOT EXISTS photo_assets (
  key text PRIMARY KEY, full_data bytea NOT NULL, thumb_data bytea NOT NULL
 );
 CREATE INDEX IF NOT EXISTS deliveries_ready ON deliveries(due) WHERE accepted IS NULL;
+
+ALTER TABLE profile ADD COLUMN IF NOT EXISTS lead_hours integer NOT NULL DEFAULT 0 CHECK(lead_hours BETWEEN 0 AND 168);
+
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS comment text NOT NULL DEFAULT '';
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS consent_version text;
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS consented_at timestamptz;

@@ -1,0 +1,65 @@
+<!doctype html><html lang="ru" style="--profile-bg:{{ p.background }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="{{ p.background }}"><title>{{ p.name }} · Онлайн-запись</title>
+<link rel="stylesheet" href="/assets/style.css"><link rel="stylesheet" href="/assets/calendar.css"><link rel="stylesheet" href="/assets/profile.css"><link rel="stylesheet" href="/assets/storefront.css"><link rel="stylesheet" href="/assets/master-site.css">
+<link rel="manifest" href="/assets/client.webmanifest"><link rel="apple-touch-icon" href="/assets/icon-192.png"></head><body>
+{% set photos={'Гигиенический маникюр':'svc-natural.webp','Маникюр с гель-лаком':'svc-gel.webp','Маникюр с френчем':'svc-french.webp','Снятие покрытия':'svc-removal.webp'} %}
+{% macro price(s,inside=false) %}<button type="button" class="price" aria-pressed="false" {{ 'data-service' if inside else 'data-price-service' }}="{{ s.id }}" data-minutes="{{ s.minutes }}" data-price="{{ s.price }}" data-title="{{ s.title }}"><span class="pick" aria-hidden="true"></span>{% if s.title in photos %}<img src="/assets/{{ photos[s.title] }}" alt="" width="50" height="50">{% endif %}<span class="price-name">{{ s.title }}<small>{{ s.minutes }} мин</small></span><strong>{{ '{:,}'.format(s.price).replace(',',' ') }} ₽</strong></button>{% endmacro %}
+<main><div class="content profile-page" data-fonts="{{ p.fonts }}" data-today="{{ today }}" style="--profile-ink:{{ foreground(p.background) }};--profile-accent:{{ p.accent }};--profile-on-accent:{{ foreground(p.accent) }}">
+<header class="top"><strong>{{ groups|first if groups|length == 1 else p.specialty }}{% if p.tagline %} · {{ p.tagline }}{% endif %}</strong><nav aria-label="Разделы">{% if works %}<a href="#portfolio">Работы</a>{% endif %}{% if items %}<a href="#services">Услуги</a>{% endif %}<a href="#contacts">Контакты</a></nav></header>
+<section class="master"><div class="identity">{% if p.avatar %}<img class="avatar" src="/media/{{ p.avatar }}/thumb" alt="Портрет мастера">{% endif %}<div><h1>{{ p.name }}</h1><p class="specialty">{{ p.specialty }}</p></div></div>
+{% if p.description %}<div class="about"><h2>О мастере</h2><p>{{ p.description }}</p></div>{% endif %}
+{% if p.cover %}<img class="profile-cover" src="/media/{{ p.cover }}/full" alt="" style="object-position:{{ p.cover_x }}% {{ p.cover_y }}%">{% endif %}
+<div class="hero-actions">{% if items %}<a class="pill filled" href="#services" data-booking-entry="service">Выбрать услугу</a>{% endif %}<a class="pill" href="#contacts">Написать мастеру</a></div></section>
+{% include "portfolio.html" %}
+{% if items %}<section class="section" id="services"><h2>Услуги</h2>{% for s in items %}{{ price(s) }}{% endfor %}<div id="price-addons" class="price-addons"></div><div class="selection"><p id="price-total" aria-live="polite">Выберите услугу</p><button type="button" id="continue-selection" class="pill filled" disabled>Продолжить</button></div></section>{% endif %}
+<section class="section contact" id="contacts"><h2>Контакты</h2><address>{{ p.address }}</address>{% if p.directions %}<p>{{ p.directions }}</p>{% endif %}<div class="contact-actions">
+{% if p.address %}<a class="pill" href="https://yandex.ru/maps/?text={{ p.address|urlencode }}" target="_blank" rel="noopener">Открыть на карте</a>{% endif %}
+{% if p.phone %}<a class="pill" href="tel:{{ p.phone }}">{{ p.phone }}</a>{% endif %}{% for link in p.links %}<a class="pill messenger" data-messenger="{{ link.title }}" href="{{ link.url }}" rel="noopener noreferrer">{{ link.title }}</a>{% endfor %}</div>
+<button id="install" class="install" type="button">Добавить на экран телефона</button><a class="privacy-link" href="/privacy">Политика обработки персональных данных</a></section>
+</div></main>
+{% if items %}<footer class="dock-region"><div class="dock"><div><small>Ближайшая запись</small>{% if windows_by_day %}{% set slot=windows_by_day[0][1][0] %}<button class="dock-time" data-booking-entry="time" data-start="{{ slot }}">{{ slot[8:10] }}.{{ slot[5:7] }}, {{ slot[11:16] }}</button>{% else %}<strong>Нет свободных окон</strong>{% endif %}</div><button data-booking-entry="time" aria-label="Открыть календарь">Выбрать время</button></div></footer>
+  <dialog id="booking" data-timezone="{{ p.timezone }}" data-address="{{ p.address }}" aria-labelledby="booking-title">
+    <div class="booking-panel">
+      <div class="booking-heading">
+        <button type="button" id="booking-back" class="text-button" aria-label="Назад">←</button>
+        <div><p id="booking-progress"></p><h2 id="booking-title" tabindex="-1"></h2></div>
+        <button type="button" id="booking-close" class="text-button" aria-label="Закрыть">×</button>
+      </div>
+      <form id="form">
+        <div class="booking-body">
+          <div data-step="service" hidden>
+            <p id="time-context" hidden></p>
+            {% for s in items %}{{ price(s,true) }}{% endfor %}
+            <fieldset id="extras" hidden><legend>Дополнения</legend>
+              {% for extra in extras %}<label class="extra" data-for-service="{{ extra.service_id }}" hidden><input type="checkbox" value="{{ extra.id }}"> {{ extra.title }} · +{{ extra.price }} ₽ · {{ extra.minutes }} мин</label>{% endfor %}
+            </fieldset>
+          </div>
+          <div data-step="time" hidden>
+            <div class="calendar">
+              <div class="month"><button type="button" id="prev" aria-label="Предыдущий месяц">‹</button><strong id="month" aria-live="polite"></strong><button type="button" id="next" aria-label="Следующий месяц">›</button></div>
+              <div class="week">{% for d in ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'] %}<span>{{ d }}</span>{% endfor %}</div>
+              <div class="dates" id="dates"></div>
+            </div>
+            <h3 id="when">Начало визита</h3>
+            <div id="slots"></div>
+            <button type="button" id="nearest" class="text-button" hidden>Ближайшая свободная дата →</button>
+          </div>
+          <div data-step="contacts" hidden>
+            <p id="summary" class="booking-summary"></p>
+            <label>Ваше имя<input id="name" autocomplete="given-name" maxlength="80" required></label>
+            <label>Телефон<input id="phone" type="tel" autocomplete="tel" maxlength="24" required></label>
+            <label>Комментарий (необязательно)<textarea id="comment" rows="2" maxlength="1000"></textarea></label>
+            <label>Соцсеть для связи (необязательно)<input id="social" maxlength="200" placeholder="@username"></label>
+            <label class="privacy-consent"><input id="consent" type="checkbox" required value="{{ privacy_version }}"><span>Я даю согласие на обработку персональных данных для записи и ознакомился с <a href="/privacy" target="_blank" rel="noopener">политикой обработки данных</a>.</span></label>
+          </div>
+          <p id="notice" role="status" hidden></p>
+          <button type="button" id="retry-slots" class="text-button" hidden>Повторить загрузку</button>
+        </div>
+        <div class="booking-actions">
+          <p id="quote" aria-live="polite" hidden></p>
+          <button type="button" id="booking-next" disabled>Далее</button>
+          <button id="submit" hidden>Записаться</button>
+        </div>
+      </form>
+    </div>
+  </dialog><script id="service-extras" type="application/json">{{ extras|tojson }}</script><script type="module" src="/assets/storefront.js"></script>{% endif %}
+<dialog id="install-dialog"><div class="panel"><div class="panel-header"><h2>Добавить на экран телефона</h2><button class="close" aria-label="Закрыть">×</button></div><p id="install-message"></p></div></dialog><script defer src="/assets/site-install.js"></script></body></html>

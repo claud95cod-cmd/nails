@@ -1,127 +1,49 @@
-{% extends "base.html" %}
+{% extends "master_layout.html" %}
 {% block title %}Витрина · Кабинет мастера{% endblock %}
-{% block head %}<link rel="stylesheet" href="/assets/admin.css"><link rel="stylesheet" href="/assets/profile.css"><link rel="stylesheet" href="/assets/content.css">{% endblock %}
-{% macro field(name, title, value='', type='text', required=false) %}
-<label>{{ title }}<input name="{{ name }}" type="{{ type }}" value="{{ value }}" {% if required %}required{% endif %}></label>
+{% block head %}<link rel="icon" href="/assets/icon-192.png"><link rel="stylesheet" href="/assets/admin.css"><link rel="stylesheet" href="/assets/content.css">{% endblock %}
+{% macro icon(path) %}<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ path }}"/></svg>{% endmacro %}
+{% macro field(name,label,value='',limit=100,required=false,placeholder='') %}<label>{{ label }}<input name="{{ name }}" value="{{ value }}" maxlength="{{ limit }}" placeholder="{{ placeholder }}" {% if required %}required{% endif %}></label>{% endmacro %}
+{% macro number(name,label,low,high) %}<label>{{ label }}<input type="number" inputmode="numeric" name="{{ name }}" min="{{ low }}" max="{{ high }}" step="1" required></label>{% endmacro %}
+{% macro work_card(key='',image='',caption='') %}
+<article class="work" data-id="{{ key }}"><div><img {% if image %}src="/admin/content/media/{{ image }}/thumb"{% endif %} alt="Работа мастера"><button type="button" data-delete aria-label="Удалить фото">×</button></div>
+<input aria-label="Подпись к фото" maxlength="250" value="{{ caption }}" placeholder="Подпись, напр. Молочное покрытие"></article>
 {% endmacro %}
-{% macro picture(name, title, key, removable=false) %}
-<div class="photo-field" data-picture="{{ name }}">
-  <input name="{{ name }}" type="hidden" value="{{ key }}">
-  <label>{{ title }}<input type="file" accept="image/jpeg,image/png,image/webp"></label>
-  <img alt="" {% if key %}src="/admin/content/media/{{ key }}/thumb"{% else %}hidden{% endif %}>
-  {% if removable %}<button type="button" class="secondary remove-photo" {% if not key %}hidden{% endif %}>Убрать фото</button>{% endif %}
-  <output role="status"></output>
-</div>
-{% endmacro %}
-{% macro addon_row(extra=none) %}
-<div class="addon-row">
-  <input type="hidden" name="addon_id" value="{{ extra.id if extra else '' }}">
-  {{ field('addon_title', 'Название дополнения', extra.title if extra else '', required=true) }}
-  {{ field('addon_price', 'Цена, ₽', extra.price if extra else 0, 'number', true) }}
-  {{ field('addon_minutes', 'Минуты', extra.minutes if extra else 0, 'number', true) }}
-  <label class="inline"><input name="addon_visible" type="checkbox" {% if not extra or extra.visible %}checked{% endif %}> Показывать дополнение</label>
-  {% if not extra %}<button type="button" class="secondary" data-remove-addon>Убрать из формы</button>{% endif %}
-</div>
-{% endmacro %}
-{% macro service_editor(item=none) %}
-<details id="{{ 'service-' ~ item.id if item else 'new-service' }}">
-  <summary>{{ item.title if item else 'Добавить услугу' }}{% if item and not item.visible %} · скрыта{% endif %}</summary>
-  <form data-editor="service" data-id="{{ item.id if item else '' }}" data-published="{{ 'true' if item and item.visible else 'false' }}">
-    {{ field('category', 'Категория', item.category if item else '', required=true) }}
-    {{ field('title', 'Название', item.title if item else '', required=true) }}
-    <div class="editor-columns">
-      {{ field('price', 'Цена, ₽', item.price if item else '', 'number', true) }}
-      {{ field('minutes', 'Длительность, мин', item.minutes if item else '', 'number', true) }}
-      {{ field('position', 'Порядок на витрине', item.position if item else 0, 'number', true) }}
-    </div>
-    <label>Инструкции перед визитом<textarea name="instructions" rows="2" maxlength="1500">{{ item.instructions if item else '' }}</textarea></label>
-    <label class="inline"><input name="visible" type="checkbox" {% if not item or item.visible %}checked{% endif %}> Показывать услугу</label>
-    <fieldset><legend>Дополнения</legend><div class="addon-list">
-      {% if item %}{% for extra in addons if extra.service_id == item.id %}{{ addon_row(extra) }}{% endfor %}{% endif %}
-    </div><button type="button" class="secondary" data-add-addon>Добавить дополнение</button></fieldset>
-    <button>Сохранить услугу</button><output role="status"></output>
-  </form>
-</details>
-{% endmacro %}
-
-{% macro work_editor(work=none) %}
-      <details {% if work and not work.visible %}data-hidden-work{% endif %}><summary>{{ (work.caption or 'Фото ' ~ work.id) if work else 'Фото' }}{% if work and not work.visible %} · скрыто{% endif %}</summary>
-      <form data-editor="work" data-id="{{ work.id if work else '' }}">
-        {{ picture('image','Заменить фото',work.image if work else '') }}
-        {{ field('caption','Подпись',work.caption if work else '') }}
-        {{ field('position','Порядок на витрине',work.position if work else 0,'number',true) }}
-        <label>Услуга<select name="service_id"><option value="">Без привязки</option>
-          {% for item in items %}<option value="{{ item.id }}" {% if work and work.service_id==item.id %}selected{% endif %}>{{ item.title }}</option>{% endfor %}
-        </select></label>
-        <label class="inline"><input type="checkbox" name="visible" {% if not work or work.visible %}checked{% endif %}> Показывать фото</label>
-        <button>Сохранить работу</button><output role="status"></output>
-      </form></details>
-{% endmacro %}
-
-{% block content %}
-<div class="cabinet content-editor">
-  <p class="editor-links"><a href="/admin?tab=settings">← Настройки</a><a href="/" target="_blank" rel="noopener">Открыть витрину</a></p>
-  <h1>Витрина</h1>
-  <p class="editor-links"><a href="#profile">Профиль</a><a href="#catalog">Услуги</a><a href="#portfolio-editor">Портфолио</a></p>
-  <section id="profile">
-    <h2>Профиль и оформление</h2>
-    <form data-editor="profile">
-      {{ field('name', 'Имя или бренд', p.name, required=true) }}
-      {{ field('specialty', 'Специализация', p.specialty) }}
-      {{ field('tagline', 'Краткое описание', p.tagline) }}
-      <label>Полное описание<textarea name="description" rows="3" maxlength="2000">{{ p.description }}</textarea></label>
-      {{ field('phone', 'Телефон', p.phone, 'tel') }}
-      {{ field('address', 'Адрес', p.address) }}
-      <label>Как пройти<textarea name="directions" rows="2" maxlength="800">{{ p.directions }}</textarea></label>
-      {{ field('timezone', 'Часовой пояс', p.timezone, required=true) }}
-      <fieldset><legend>Ссылки</legend><div id="link-list">
-        {% for link in p.links %}<div class="link-row">{{ field('link_title','Подпись',link.title,required=true) }}{{ field('link_url','Ссылка HTTPS',link.url,'url',true) }}<button type="button" class="secondary" data-remove-link>Убрать ссылку</button></div>{% endfor %}
-      </div><button type="button" class="secondary" id="add-link">Добавить ссылку</button></fieldset>
-      <div class="editor-colors">
-        {{ field('accent', 'Основной цвет', p.accent, 'color') }}
-        {{ field('background', 'Фоновый цвет', p.background, 'color') }}
-        <label>Шрифты<select name="fonts"><option value="classic" {% if p.fonts=='classic' %}selected{% endif %}>Georgia и Arial</option><option value="modern" {% if p.fonts=='modern' %}selected{% endif %}>Системные без засечек</option></select></label>
-      </div>
-      {{ picture('avatar', 'Аватар или логотип', p.avatar, true) }}
-      {{ picture('cover', 'Обложка', p.cover, true) }}
-      <div class="editor-columns">
-        <label>Фокус обложки по горизонтали<input name="cover_x" type="range" min="0" max="100" value="{{ p.cover_x }}"></label>
-        <label>Фокус обложки по вертикали<input name="cover_y" type="range" min="0" max="100" value="{{ p.cover_y }}"></label>
-      </div>
-      <h3>Мобильный предпросмотр</h3>
-      <div id="preview" class="profile-page" data-fonts="{{ p.fonts }}" style="--profile-bg:{{ p.background }};--profile-ink:{{ foreground(p.background) }};--profile-accent:{{ p.accent }};--profile-on-accent:{{ foreground(p.accent) }}">
-        <header class="profile-intro">
-          <img class="profile-cover" alt="" {% if p.cover %}src="/admin/content/media/{{ p.cover }}/full"{% else %}hidden{% endif %}>
-          <div class="profile-identification">
-            <img class="profile-avatar" alt="" {% if p.avatar %}src="/admin/content/media/{{ p.avatar }}/thumb"{% else %}hidden{% endif %}>
-            <span data-preview="specialty">{{ p.specialty }}</span><h1 data-preview="name">{{ p.name }}</h1>
-            <p data-preview="tagline">{{ p.tagline }}</p><p data-preview="address">{{ p.address }}</p><span class="button">Записаться</span>
-          </div>
-        </header><p class="profile-description" data-preview="description">{{ p.description }}</p>
-      </div>
-      <button>Сохранить профиль</button><output role="status"></output>
-    </form>
-  </section>
-  <section id="catalog">
-    <h2>Услуги</h2>
-    {% for item in items %}{{ service_editor(item) }}{% endfor %}
-    {{ service_editor() }}
-  </section>
-  <section id="portfolio-editor">
-    <h2>Портфолио</h2>
-    <form id="batch"><label>Добавить фото<input type="file" multiple required accept="image/jpeg,image/png,image/webp"></label>
-      <p>JPEG, PNG или WebP до 8 МБ. Новые фото можно подписать и привязать к услугам после загрузки.</p>
-      <button>Загрузить фото</button><ul id="batch-results" aria-live="polite"></ul>
-    </form>
-    <div id="work-list">
-    {% for work in works %}
-      {{ work_editor(work) }}
-    {% endfor %}
-    </div>
-  </section>
-</div>
-<template id="work-template">{{ work_editor() }}</template>
-<template id="addon-template">{{ addon_row() }}</template>
-<template id="link-template"><div class="link-row">{{ field('link_title','Подпись',required=true) }}{{ field('link_url','Ссылка HTTPS',type='url',required=true) }}<button type="button" class="secondary" data-remove-link>Убрать ссылку</button></div></template>
-<script defer src="/assets/content.js"></script>
+{% block desk_content %}
+{% set tabs={'profile':'Профиль','services':'Услуги','portfolio':'Портфолио'} %}
+{% set section=request.query_params.get('section','profile') %}
+{% if section not in tabs %}{% set section='profile' %}{% endif %}
+<div class="content-editor">
+<div class="ce-heading"><h1>Витрина</h1><a class="ce-secondary button" href="/" target="_blank" rel="noopener noreferrer">Открыть витрину {{ icon('M14 4h6v6m0-6-10 10m0-8H5v14h14v-6') }}</a></div>
+<div class="planner-views" role="navigation" aria-label="Разделы витрины">{% for key,label in tabs.items() %}<a href="?section={{ key }}{% if day %}&day={{ day }}{% endif %}" {% if section==key %}aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</div>
+{% if section=='profile' %}
+<form id="ce-profile" class="ce-card"><div class="avatar-line"><div class="ce-avatar"><span>{{ p.name[:1] }}</span><img alt="Аватар мастера" {% if p.avatar %}src="/admin/content/media/{{ p.avatar }}/thumb"{% else %}hidden{% endif %}></div>
+<input name="avatar" type="hidden" value="{{ p.avatar }}"><input id="avatar-file" type="file" hidden accept="image/jpeg,image/png,image/webp"><button type="button" class="ce-secondary" id="pick-avatar">Загрузить фото</button><button type="button" class="ce-secondary" id="remove-avatar" {% if not p.avatar %}hidden{% endif %}>Удалить</button></div>
+<div class="ce-pair">{{ field('name','Имя или студия',p.name,100,true,'Лина') }}{{ field('specialty','Подпись под именем',p.specialty,100,false,'Мастер маникюра') }}</div>
+{{ field('city','Город',p.tagline,200,false,'Ульяновск') }}
+<label>О мастере<textarea name="description" rows="4" maxlength="2000">{{ p.description }}</textarea></label>
+<h2>Контакты</h2>{{ field('phone','Телефон',p.phone,24) }}{{ field('address','Адрес',p.address,250,false,'Ульяновск, ул. Карла Маркса 1') }}
+<label>Как пройти<textarea name="directions" rows="2" maxlength="800">{{ p.directions }}</textarea></label>
+{{ field('contact','Контакт для записи (Telegram / WhatsApp)',contact,400,false,'@username') }}
+<button>Сохранить профиль</button></form>
+{% elif section=='services' %}
+<div class="ce-heading"><h2>Услуги</h2><button id="add-service">+ Добавить услугу</button></div>
+<div id="services-list">{% for item in items %}
+<article class="service-row" data-id="{{ item.id }}"><div><strong>{{ item.title }}</strong><small>{{ item.minutes }} мин</small></div>
+<b>{{ '{:,}'.format(item.price).replace(',',' ') }} ₽</b>
+<div class="service-actions"><input type="checkbox" class="visibility" role="switch" aria-label="Показывать {{ item.title }}" {% if item.visible %}checked{% endif %}>
+<button data-op="up" aria-label="Выше" {% if loop.first %}disabled{% endif %}>↑</button><button data-op="down" aria-label="Ниже" {% if loop.last %}disabled{% endif %}>↓</button>
+<button data-op="edit" aria-label="Редактировать">{{ icon('m4 16 12-12 4 4L8 20H4zm9-9 4 4') }}</button><button data-op="delete" aria-label="Удалить услугу">{{ icon('M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7m4-7v7') }}</button></div></article>
+{% else %}<p class="ce-card">Услуг пока нет. Нажмите «+ Добавить услугу», чтобы заполнить прайс.</p>{% endfor %}</div>
+<script type="application/json" id="catalog-data">{{ {'items':items,'addons':addons}|tojson }}</script>
+<dialog id="service-dialog" aria-labelledby="service-heading"><form id="service-form"><div class="ce-heading"><h2 id="service-heading">Добавить услугу</h2><button type="button" class="ce-secondary" data-close aria-label="Закрыть">×</button></div>
+{{ field('title','Название',required=true) }}<div class="ce-pair">{{ number('price','Цена, ₽',0,1000000) }}{{ number('minutes','Длительность, мин',1,720) }}</div>
+<h3>Дополнения</h3><div id="addons"></div><button type="button" class="ce-secondary" id="add-addon">+ Добавить дополнение</button>
+<div class="ce-footer"><button type="button" class="ce-secondary" data-close>Отмена</button><button>Сохранить</button></div></form><div class="ce-error" role="alert"></div></dialog>
+<template id="addon-row"><div class="addon-row">{{ field('extra_title','Название дополнения',required=true) }}<div class="ce-pair">{{ number('extra_price','Цена, ₽',0,1000000) }}{{ number('extra_minutes','Минуты',0,480) }}</div><button type="button" class="ce-secondary" data-remove>Удалить дополнение</button></div></template>
+{% else %}
+<h2>Портфолио</h2><div class="work-grid"><button id="add-photo" type="button"><b>+</b>Добавить фото<small>JPEG, PNG, WebP до 8 МБ</small></button>
+{% for work in works %}{{ work_card(work.id,work.image,work.caption) }}{% endfor %}</div>
+<input id="work-files" type="file" hidden multiple accept="image/jpeg,image/png,image/webp"><template id="work-card">{{ work_card() }}</template>
+{% endif %}
+<div id="ce-toast" role="status" aria-live="polite" hidden></div></div><script defer src="/assets/content.js"></script>
 {% endblock %}

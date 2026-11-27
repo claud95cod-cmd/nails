@@ -1,0 +1,20 @@
+  {% if works %}
+  <section class="section portfolio" id="portfolio"><h2>Портфолио</h2>
+    <div class="gallery">
+      {% for work in works %}
+      <figure>
+        <button type="button" class="work-open" data-image="/media/{{ work.image }}/full" data-caption="{{ work.caption }}" data-book-service="{{ work.service_id if work.service_id in items|map(attribute='id')|list else '' }}" aria-label="Открыть фото {{ loop.index }}{% if work.caption %} · {{ work.caption }}{% endif %}">
+          <img src="/media/{{ work.image }}/thumb" alt="{{ work.caption }}" width="420" height="420" loading="lazy">
+        </button>
+        {% if work.caption %}<figcaption>{{ work.caption }}</figcaption>{% endif %}
+      </figure>
+      {% endfor %}
+    </div>
+    <dialog id="work-dialog" aria-label="Просмотр работы">
+      <button type="button" id="work-close" autofocus>Закрыть</button>
+      <img id="work-large" alt=""><p id="work-caption" hidden></p>
+      <button type="button" id="work-book" hidden>Записаться на эту услугу</button>
+    </dialog>
+    <script defer src="/assets/portfolio.js"></script>
+  </section>
+  {% endif %}

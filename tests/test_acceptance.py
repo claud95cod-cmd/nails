@@ -1,3 +1,4 @@
+from main import PRIVACY_VERSION
 import json
 import os
 import uuid
@@ -14,7 +15,7 @@ from test_instances import KIT, environment, login, picture, running
 
 def public_booking(client):
     quote = client.get("/slots").json()
-    return client.post("/book", json={
+    return client.post("/book", json={"consent_version": PRIVACY_VERSION,
         "name": "Приёмка push", "phone": "+70000000016", "starts": quote["times"][0],
         "price": quote["price"], "request_id": str(uuid.uuid4()),
     })

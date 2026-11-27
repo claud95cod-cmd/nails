@@ -1,0 +1,95 @@
+{
+  "profile": {
+    "name": "Лина",
+    "specialty": "Мастер маникюра",
+    "tagline": "Ульяновск",
+    "description": "Я Лина. Делаю аккуратный маникюр и помогаю подобрать форму и оттенок под ваш стиль.",
+    "phone": "",
+    "links": [],
+    "address": "Ульяновск, ул. Карла Маркса 1",
+    "directions": "",
+    "timezone": "Europe/Ulyanovsk",
+    "accent": "#633349",
+    "background": "#fcf8f5",
+    "fonts": "modern",
+    "avatar": "photos/master-avatar.webp"
+  },
+  "services": [
+    {
+      "category": "Маникюр",
+      "title": "Гигиенический маникюр",
+      "price": 900,
+      "minutes": 45,
+      "position": 0,
+      "addons": [
+        {
+          "title": "Снятие покрытия",
+          "minutes": 25,
+          "price": 400
+        }
+      ]
+    },
+    {
+      "category": "Маникюр",
+      "title": "Маникюр с гель-лаком",
+      "price": 1700,
+      "minutes": 90,
+      "position": 1,
+      "addons": [
+        {
+          "title": "Снятие покрытия",
+          "minutes": 25,
+          "price": 400
+        }
+      ]
+    },
+    {
+      "category": "Маникюр",
+      "title": "Маникюр с френчем",
+      "price": 2000,
+      "minutes": 105,
+      "position": 2,
+      "addons": [
+        {
+          "title": "Снятие покрытия",
+          "minutes": 25,
+          "price": 400
+        }
+      ]
+    },
+    {
+      "category": "Маникюр",
+      "title": "Снятие покрытия",
+      "price": 400,
+      "minutes": 25,
+      "position": 3,
+      "addons": []
+    }
+  ],
+  "portfolio": [
+    {
+      "caption": "Розовый жемчуг",
+      "image": "photos/work-pearl.webp",
+      "position": 0,
+      "service": 2
+    },
+    {
+      "caption": "Молочное покрытие",
+      "image": "photos/nails-milky.webp",
+      "position": 1,
+      "service": 2
+    },
+    {
+      "caption": "Классический френч",
+      "image": "photos/nails-french.webp",
+      "position": 2,
+      "service": 3
+    },
+    {
+      "caption": "Бордовое покрытие",
+      "image": "photos/nails-burgundy.webp",
+      "position": 3,
+      "service": 2
+    }
+  ]
+}

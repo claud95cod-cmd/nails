@@ -31,7 +31,7 @@ def run():
         try:
             env=dict(os.environ,**settings(password,"test@example.org"))
             env.update(DATABASE_URL=f"postgresql://master:{password}@127.0.0.1:{port}/postgres",
-                       TEST_MASTER_PASSWORD=password,TEST_DISPOSABLE_DATABASE="1",
+                       MASTER_CABINET_ENABLED="1",TEST_MASTER_PASSWORD=password,TEST_DISPOSABLE_DATABASE="1",
                        TEST_POSTGRES_BIN=str(binary),TEST_POSTGRES_DATA=str(data))
             return subprocess.call([sys.executable,"-m","pytest","-q","tests",*sys.argv[1:]],cwd=root,env=env)
         finally:

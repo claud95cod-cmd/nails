@@ -1,2 +1,44 @@
-{% extends "base.html" %}{% block content %}<header><span>{{ p.name }}</span><h1>{{ "Запись отменена" if v.cancelled else "Вы записаны" }}</h1></header>
-<section><h2>{{ v.title }}</h2><p>{{ v.starts.astimezone(z).strftime('%d.%m.%Y · %H:%M') }}–{{ v.ends.astimezone(z).strftime('%H:%M') }} · {{ v.price }} ₽</p><h3>Адрес</h3><p>{{ p.address }}<br>{{ p.directions }}</p>{% if v.instructions %}<h3>Перед визитом</h3><p>{{ v.instructions }}</p>{% endif %}<button id="copy">Скопировать приватную ссылку</button><p id="result" role="status"></p></section><footer>Для переноса или отмены <a href="tel:{{ p.phone }}">позвоните мастеру · {{ p.phone }}</a></footer><script>copy.onclick=async()=>{try{await navigator.clipboard.writeText(location.href);result.textContent='Ссылка скопирована'}catch{result.textContent=location.href}}</script>{% endblock %}
+{% extends "base.html" %}
+{% block title %}{{ ('Запись отменена' if v.cancelled else 'Вы записаны') }} · {{ p.name }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/assets/profile.css"><link rel="stylesheet" href="/assets/storefront.css">{% endblock %}
+{% block content %}
+<article class="storefront profile-page visit-page" style="--profile-bg:{{ p.background }};--profile-ink:{{ foreground(p.background) }};--profile-accent:{{ p.accent }};--profile-on-accent:{{ foreground(p.accent) }}">
+  <header class="studio-intro">
+    <div class="studio-details">
+      <p>{{ p.name }}</p>
+      <h1>{{ "Запись отменена" if v.cancelled else "Вы записаны" }}</h1>
+    </div>
+  </header>
+  <section>
+    <h2>{{ v.title }}</h2>
+    {% set starts = v.starts.astimezone(z) %}
+    {% set ends = v.ends.astimezone(z) %}
+    <p>{{ starts.strftime('%d.%m.%Y · %H:%M') }} — {{ ends.strftime('%H:%M' if ends.date() == starts.date() else '%d.%m.%Y · %H:%M') }} · {{ v.price }} ₽</p>
+    {% if p.address or p.directions %}<h3>Адрес</h3><p>{{ p.address }}{% if p.directions %}<br>{{ p.directions }}{% endif %}</p>{% endif %}
+    {% if v.instructions %}<h3>Перед визитом</h3><p>{{ v.instructions }}</p>{% endif %}
+    <button id="copy" type="button">Скопировать приватную ссылку</button>
+    <p id="result" role="status"></p>
+  </section>
+  {% if p.phone or p.links %}
+  <footer>
+    <h2>Связаться с мастером</h2>
+    {% if not v.cancelled %}<p>Для переноса или отмены записи.</p>{% endif %}
+    <div class="profile-contacts">
+      {% if p.phone %}<a href="tel:{{ p.phone }}">{{ p.phone }}</a>{% endif %}
+      {% for link in p.links %}<a href="{{ link.url }}" rel="noopener noreferrer">{{ link.title }}</a>{% endfor %}
+    </div>
+  </footer>
+  {% endif %}
+</article>
+<script>
+  document.getElementById('copy').addEventListener('click', async () => {
+    const result = document.getElementById('result');
+    try {
+      await navigator.clipboard.writeText(location.href);
+      result.textContent = 'Ссылка скопирована';
+    } catch {
+      result.textContent = location.href;
+    }
+  });
+</script>
+{% endblock %}

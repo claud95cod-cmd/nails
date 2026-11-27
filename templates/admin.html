@@ -1,32 +1,42 @@
-{% extends "base.html" %}
+{% extends "master_layout.html" %}
 {% block head %}<link rel="manifest" href="/assets/master.webmanifest"><link rel="stylesheet" href="/assets/admin.css"><link rel="apple-touch-icon" href="/assets/icon-192.png"><script defer src="/assets/device.js"></script>{% endblock %}
 {% macro hours(a,b) %}<div class="hours"><label>С<input name="opens" type="time" required value="{{ a.strftime('%H:%M') if a else '10:00' }}"></label><label>До<input name="closes" type="time" required value="{{ b.strftime('%H:%M') if b else '18:00' }}"></label></div>{% endmacro %}
-{% block content %}
-<div class="cabinet"><small>{{ p.name }} · Кабинет мастера</small>
+{% block desk_content %}
+<div class="cabinet">
 {% set tabs={'visits':'Записи','schedule':'График','settings':'Настройки'} %}
-<nav aria-label="Кабинет мастера">{% for key,label in tabs.items() %}<a href="/admin?tab={{ key }}&day={{ day }}" {% if key==tab %}aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>
-<h1>{{ tabs[tab] }}</h1>
+<div class="desk-heading"><h1>{{ tabs[tab] }}</h1>{% if tab == 'visits' %}<a class="button" href="/admin/new?day={{ day }}">+ Добавить визит</a>{% endif %}</div>
 {% if tab=='visits' %}
+<div class="day-heading">
+  <div><h2>{{ day.strftime('%d.%m.%Y') }}</h2><p class="day-caption">Активных записей · {{ rows|rejectattr('cancelled')|list|length }}</p></div>
+  <form><label class="date-trigger"><span aria-hidden="true">Выбрать день</span><input aria-label="Выбрать день" type="date" name="day" value="{{ day }}" onchange="this.form.submit()"></label></form>
+</div>
 <div class="quick">{% for d in quick %}<a {% if d==day %}aria-current="date"{% endif %} href="?day={{ d }}">{{ ['Сегодня','Завтра','Послезавтра'][loop.index0] }}</a>{% endfor %}</div>
-<div class="tools"><form><label>День визита<input aria-label="Выбрать день" type="date" name="day" value="{{ day }}" onchange="this.form.submit()"></label></form><a class="button" href="/admin/new">+ Добавить визит</a></div>
-{% for v in rows %}<details data-id="{{ v.id }}" {% if visit==v.id %}open{% endif %}><summary>{{ v.starts.astimezone(z).strftime('%H:%M') }}–{{ v.ends.astimezone(z).strftime('%H:%M') }} · {{ v.title }}{% if v.cancelled %} · Отменена{% endif %}</summary><p>{{ v.name }} · <a href="tel:{{ v.phone }}">Позвонить клиенту · {{ v.phone }}</a></p>
+{% for v in (rows + pauses)|sort(attribute='starts') %}
+{% if 'title' not in v %}<p class="break-row"><strong>{{ v.starts.astimezone(z).strftime('%H:%M') }}–{{ v.ends.astimezone(z).strftime('%H:%M') }}</strong> · Перерыв</p>
+{% else %}<details data-id="{{ v.id }}" data-start="{{ v.starts.astimezone(z).isoformat() }}" {% if visit==v.id %}open{% endif %}>
+<summary><span class="visit-line"><time>{{ v.starts.astimezone(z).strftime('%H:%M') }}<small>до {{ v.ends.astimezone(z).strftime('%H:%M') }}</small></time><span><strong>{{ v.name }}</strong><small>{{ v.title }} · {{ v.price }} ₽{% if v.cancelled %} · Отменена{% endif %}</small></span><span class="expand" aria-hidden="true">⌄</span></span></summary><p>{{ v.name }} · <a href="tel:{{ v.phone }}">Позвонить клиенту · {{ v.phone }}</a></p>
+{% if v.comment %}<p>Комментарий клиента · {{ v.comment }}</p>{% endif %}
 {% if v.social %}<p>Соцсеть · {% if v.social.startswith('https://') %}<a href="{{ v.social }}" rel="noopener noreferrer" target="_blank">{{ v.social }}</a>{% else %}{{ v.social }}{% endif %}</p>{% endif %}
 <p>{{ v.minutes }} мин · {{ v.price }} ₽ · {{ 'Отменена' if v.cancelled else 'Подтверждена' }}</p>
 {% if not v.cancelled %}<button data-action="options">Перенести</button> <button data-action="cancel">Отменить</button>
-<div hidden class="move"><label>Новое время<select></select></label><button data-action="move">Подтвердить перенос</button></div>{% endif %}<p role="status"></p></details>{% else %}<p>На этот день записей нет.</p>{% endfor %}
+{% endif %}<p role="status"></p></details>{% endif %}{% else %}<p class="empty-day">На этот день записей нет.</p>{% endfor %}
+
+<dialog id="move-dialog" aria-labelledby="move-title">
+<form method="dialog"><button aria-label="Закрыть" class="move-close">×</button></form>
+<h2 id="move-title">Перенести визит</h2>
+<label class="date-trigger"><span>Дата визита · <span id="move-day-text">{{ day.strftime('%d.%m.%Y') }}</span></span><input aria-label="Дата визита" type="date" id="move-day" value="{{ day }}"></label>
+<fieldset><legend>Свободное время</legend><div id="move-times"></div></fieldset>
+<p role="status"></p><button id="move-submit" disabled>Подтвердить перенос</button>
+</dialog>
 
 {% elif tab=='schedule' %}
-<section><h2>Обычная неделя</h2>{% for d in week %}{% set pair=weekly.get(loop.index0) %}{% set off=pair and not pair[0] %}
-<form class="rule weekday" data-kind="week"><strong>{{ ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'][loop.index0] }}</strong><input type="hidden" name="day" value="{{ d }}"><label class="switch"><input name="work" type="checkbox" {% if not off %}checked{% endif %}><span>{{ 'Выходной' if off else 'Рабочий' }}</span></label>
-{{ hours(pair[0] if pair else none,pair[1] if pair else none) }}<button class="commit" hidden>Сохранить</button><output></output></form>{% endfor %}</section>
-<section><h2>Особые дни и отпуск</h2>{% for d,pair in exceptions|dictsort %}<p>{{ d.strftime('%d.%m.%Y') }} · {{ pair[0].strftime('%H:%M')+'–'+pair[1].strftime('%H:%M') if pair[0] else 'Выходной' }}</p>{% else %}<p>Особых дней пока нет.</p>{% endfor %}
-<details><summary>+ Добавить день</summary><form class="rule" data-kind="date"><label>Выберите день<input name="day" type="date" required value="{{ day }}"></label><label class="switch"><input type="checkbox" name="off" checked><span>Весь день выходной</span></label>{{ hours(none,none) }}<button>Сохранить день</button><output></output></form></details></section>
-<section><details><summary>Перерывы</summary><form><input type="hidden" name="tab" value="schedule"><label>Показать перерывы на дату<input type="date" name="day" value="{{ day }}" onchange="this.form.submit()"></label></form>{% for pause in pauses %}<p data-id="{{ pause.id }}">Перерыв · {{ pause.starts.astimezone(z).strftime('%H:%M') }}–{{ pause.ends.astimezone(z).strftime('%H:%M') }} <button data-action="unblock">Снять перерыв</button><span role="status"></span></p>{% endfor %}<form class="rule" data-kind="break"><input type="hidden" name="day" value="{{ day }}">{{ hours(none,none) }}<button>Добавить перерыв</button><output></output></form></details></section>
-<section><h2>Параметры окошек</h2><form class="rule" data-kind="settings"><input type="hidden" name="day" value="{{ day }}">
-{% for name,title,values,current,unit in [('step','Интервал свободных слотов',[30,45,60],p.step,'мин'),('horizon','На сколько дней вперёд открыта запись',[14,30,60],p.horizon,'дн.')] %}
-<fieldset><legend>{{ title }}</legend>{% for value in values+([current] if current not in values else []) %}<label class="chip"><input type="radio" name="{{ name }}" value="{{ value }}" {% if current==value %}checked{% endif %}>{{ value }} {{ unit }}</label>{% endfor %}</fieldset>{% endfor %}<button class="commit" hidden>Сохранить</button><output></output></form></section><p>Часовой пояс · {{ p.timezone }}</p>
+{% include 'master_schedule.html' %}
 {% else %}
 <section><h2>Витрина</h2><a class="button" href="/admin/content">Профиль, услуги и портфолио</a></section>
+<section class="planner"><h2>Правила записи</h2><form class="schedule-editor" data-kind="settings" data-day="{{ day }}">
+{% for name,title,current,unit,limit in [('step','Интервал между вариантами начала визита',p.step,'мин',1440),('horizon','На сколько дней вперёд открыта запись',p.horizon,'дн.',180),('lead_hours','За сколько минимум можно записаться',p.lead_hours|default(0),'ч',168)] %}
+<label>{{ title }} ({{ unit }})<input type="number" name="{{ name }}" required min="{{ 0 if name=='lead_hours' else 1 }}" max="{{ limit }}" value="{{ current }}"></label>{% endfor %}
+{% include 'schedule_save.html' %}</form></section>
 <section id="devices" data-key="{{ public_key }}"><h2>Уведомления</h2><strong id="active" hidden>Уведомления активны</strong><p id="status" role="status"></p><button id="enable" disabled>Включить уведомления</button><button id="test" hidden>Проверить</button> <button id="disable" hidden>Отключить</button></section>
 <form class="logout" action="/admin/logout" method="post"><button>Выйти</button></form>{% endif %}
-</div><script defer src="/assets/schedule.js"></script>{% endblock %}
+</div><script defer src="/assets/schedule.js"></script><script defer src="/assets/schedule-editor.js"></script>{% endblock %}

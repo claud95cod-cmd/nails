@@ -1,3 +1,4 @@
+from main import PRIVACY_VERSION
 import json
 import os
 import shutil
@@ -157,10 +158,9 @@ def test_two_instances(monkeypatch, tmp_path, record_property):
                         data={"endpoint": lashes_endpoint, "keys": keys}).status == 401
         master.get_by_role("link", name="Настройки").click()
         master.get_by_role("link", name="Профиль, услуги и портфолио").click()
-        master.get_by_label("Имя или бренд").fill("Студия Ивы · ресницы")
-        master.locator("#preview").get_by_role("heading", name="Студия Ивы · ресницы").wait_for()
+        master.get_by_label("Имя или студия").fill("Студия Ивы · ресницы")
         master.get_by_role("button", name="Сохранить профиль").click()
-        master.locator("#profile").get_by_text("Сохранено").wait_for()
+        master.get_by_text("Изменения сохранены", exact=True).wait_for()
         assert master.evaluate("document.documentElement.scrollWidth <= innerWidth")
 
         first_site.goto(nails)
@@ -186,40 +186,36 @@ def test_two_instances(monkeypatch, tmp_path, record_property):
         quote = api.get(lashes + "/slots?service=1&addons=1&addons=2").json()
         assert quote["times"] and (quote["price"], quote["minutes"]) == (3200, 130)
 
-        master.get_by_label("Обложка", exact=True).set_input_files({
-            "name": "cover.webp", "mimeType": "image/webp", "buffer": picture("purple")})
-        master.locator('[data-picture="cover"]').get_by_text("Фото готово.", exact=False).wait_for()
-        old_positions = master.locator("#preview .profile-cover").evaluate("(img) => img.style.objectPosition")
-        master.locator("[name=cover_y]").press("ArrowLeft")
-        assert master.locator("#preview .profile-cover").evaluate("(img) => img.style.objectPosition") != old_positions
+        master.locator("#avatar-file").set_input_files({
+            "name": "avatar.webp", "mimeType": "image/webp", "buffer": picture("purple")})
+        master.locator(".ce-avatar img[src^=blob]").wait_for()
         master.get_by_role("button", name="Сохранить профиль").click()
-        master.locator("#profile").get_by_text("Сохранено").wait_for()
-
-        editor = master.locator("#service-1")
-        editor.locator("summary").click()
+        master.locator(".ce-avatar img[src^='/admin/content/media/']").wait_for()
+        master.get_by_role("link", name="Услуги", exact=True).click()
+        master.locator(".service-row[data-id='1']").get_by_role("button",name="Редактировать").click()
+        editor = master.get_by_role("dialog")
         editor.locator('input[name=price]').fill("2900")
-        editor.get_by_role("button", name="Сохранить услугу").click()
-        master.locator("#service-1").get_by_text("Сохранено").wait_for()
+        with master.expect_navigation():
+            editor.get_by_role("button", name="Сохранить",exact=True).click()
         assert api.get(nails + "/slots").json()["price"] == 2000
         updated = api.get(lashes + "/slots?service=1").json()
         assert updated["price"] == 2900
         stale = api.post(lashes + "/book", headers={"Origin": lashes},
-            data={"service": 1, "minutes": 10, "price": 2900, "starts": updated["times"][0],
+            data={"consent_version": PRIVACY_VERSION,"service": 1, "minutes": 10, "price": 2900, "starts": updated["times"][0],
                   "request_id": str(uuid.uuid4()), "name": "Тест", "phone": "+70000000004"})
         assert stale.status == 409 and "Длительность изменилась" in stale.json()["detail"]
         first_site.reload()
         second_site.reload()
         assert first_site.locator(".profile-cover").get_attribute("src") == original_nails_cover
-        assert second_site.locator(".profile-cover").get_attribute("src") != initial_cover
+        assert second_site.locator(".profile-cover").get_attribute("src") == initial_cover
 
-        work = master.locator("#work-list details").first
-        work.locator("summary").click()
-        work.get_by_label("Заменить фото").set_input_files({
-            "name": "work.webp", "mimeType": "image/webp", "buffer": picture("teal")})
-        work.get_by_text("Фото готово.", exact=False).wait_for()
-        work.get_by_role("button", name="Сохранить работу").click()
-        work.get_by_text("Сохранено").wait_for()
+        master.get_by_role("link", name="Портфолио",exact=True).click()
+        caption = master.get_by_label("Подпись к фото").first
+        caption.fill("Обновлённая подпись")
+        caption.press("Enter")
+        master.get_by_text("Сохранено",exact=True).wait_for()
         second_site.reload()
+        assert second_site.locator("figcaption").inner_text() == "Обновлённая подпись"
         thumbnail = second_site.locator(".work-open img").get_attribute("src")
         assert thumbnail.endswith("/thumb") and api.get(lashes + thumbnail).ok
         second_site.get_by_role("button", name="Открыть фото").click()
@@ -227,15 +223,17 @@ def test_two_instances(monkeypatch, tmp_path, record_property):
         with Image.open(BytesIO(api.get(lashes + thumbnail).body())) as thumb:
             assert thumb.width == 420
         with Image.open(BytesIO(api.get(lashes + thumbnail.replace("/thumb", "/full")).body())) as large:
-            assert large.width == 800
+            assert large.width == 1600
         second_site.get_by_role("button", name="Закрыть").click()
         assert second_site.locator(".work-open").evaluate("(button) => document.activeElement === button")
         second_site.get_by_role("button", name="Открыть фото").click()
         second_site.get_by_role("button", name="Записаться на эту услугу").click()
-        second_site.locator("#slots button:enabled").first.wait_for()
+        second_site.locator("#slots button:enabled").first.click()
+        second_site.get_by_role("button", name="Далее").click()
         expect(second_site.locator("#summary")).to_contain_text("2900 ₽")
         second_site.get_by_label("Ваше имя").fill("Проверка изоляции")
         second_site.get_by_label("Телефон").fill("+70000000003")
+        second_site.locator("#consent").check()
         second_site.get_by_role("button", name="Записаться", exact=True).click()
         second_site.get_by_role("heading", name="Вы записаны").wait_for()
         with monkeypatch.context() as env:
@@ -260,16 +258,15 @@ def test_two_instances(monkeypatch, tmp_path, record_property):
         notification = json.loads(sent[0][1])
         assert "Классическое наращивание" in notification["body"]
         assert notification["url"] == "/admin?visit=" + str(visit)
-        master.goto(lashes + "/admin/content#portfolio-editor")
-        master.get_by_label("Добавить фото").set_input_files([
+        master.goto(lashes + "/admin/content?section=portfolio")
+        master.locator("#work-files").set_input_files([
             {"name": "first.webp", "mimeType": "image/webp", "buffer": picture("pink")},
             {"name": "broken.webp", "mimeType": "image/webp", "buffer": b"not an image"},
             {"name": "last.webp", "mimeType": "image/webp", "buffer": picture("orange")},
         ])
-        master.get_by_role("button", name="Загрузить фото").click()
-        master.get_by_text("last.webp · загружено").wait_for()
-        assert master.get_by_text("broken.webp · Нужна фотография", exact=False).is_visible()
-        assert master.locator("#work-list details").count() == 3
+        master.locator(".work").nth(2).wait_for()
+        master.get_by_text("Поддерживаются только JPEG, PNG и WebP.", exact=True).wait_for()
+        assert master.locator(".work").count() == 3
         browser.close()
 
     original = Path(os.environ["TEST_POSTGRES_DATA"])

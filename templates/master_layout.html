@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+{% set active = tab|default('visits') %}
+{% set sections = [
+    ('visits', 'Записи', '/admin?tab=visits', 'M4 6h16v14H4z M7 3v5m10-5v5M4 11h16'),
+    ('schedule', 'График', '/admin?tab=schedule', 'M12 3a9 9 0 1 0 .01 0 M12 7v5l4 2'),
+    ('content', 'Витрина', '/admin/content', 'M3 10l2-6h14l2 6 M4 10v10h16V10 M3 10q3 4 6 0 3 4 6 0 3 4 6 0 M9 20v-5h6v5'),
+    ('settings', 'Настройки', '/admin?tab=settings', 'M4 7h5m5 0h6 M9 4v6h5V4z M4 17h9m5 0h2 M13 14v6h5v-6z')
+] %}
+<div class="master-desk">
+  <div class="desk-identity"><strong>{{ p.name }}</strong><small>Кабинет мастера</small></div>
+  <nav class="desk-nav" aria-label="Кабинет мастера">
+    {% for key,label,path,icon in sections %}
+    <a href="{{ path }}{% if day is defined and day %}{{ '?' if key == 'content' else '&' }}day={{ day }}{% endif %}" {% if active == key %}aria-current="page"{% endif %}>
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="{{ icon }}"/></svg>
+      {{ label }}
+    </a>
+    {% endfor %}
+  </nav>
+  <div class="desk-body">{% block desk_content %}{% endblock %}</div>
+</div>
+{% endblock %}

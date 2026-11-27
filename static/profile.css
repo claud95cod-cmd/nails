@@ -7,8 +7,8 @@
   border-radius: 1.4rem;
   overflow-wrap: anywhere;
 }
-.profile-page[data-fonts="modern"] :is(h1,h2,h3) {font-family: system-ui, sans-serif; font-weight: 650}
-.profile-page[data-fonts="classic"] {font-family: Arial, sans-serif}
+.profile-page:not(.storefront)[data-fonts="modern"] :is(h1,h2,h3) {font-family: system-ui, sans-serif; font-weight: 650}
+.profile-page:not(.storefront)[data-fonts="classic"] {font-family: Arial, sans-serif}
 .profile-page [hidden] {display: none!important}
 .profile-page .profile-intro {padding: 0; overflow: hidden; color: inherit; background: transparent; border: 1px solid currentColor}
 .profile-cover {display: block; width: 100%; height: auto; aspect-ratio: 2 / 1; object-fit: cover}

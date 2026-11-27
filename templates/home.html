@@ -1,21 +1,10 @@
-{% extends "base.html" %}
-{% block head %}<link rel="stylesheet" href="/assets/calendar.css"><link rel="stylesheet" href="/assets/profile.css">{% endblock %}
-{% block title %}{{ p.name }} · Онлайн-запись{% endblock %}
-{% block content %}
-<article class="profile-page" data-fonts="{{ p.fonts }}" style="--profile-bg:{{ p.background }};--profile-ink:{{ foreground(p.background) }};--profile-accent:{{ p.accent }};--profile-on-accent:{{ foreground(p.accent) }}">
-  {% if manual %}<p class="profile-contacts"><a href="/admin">← Записи</a></p>{% endif %}
-  <header class="profile-intro">
-    {% if p.cover and not manual %}<img class="profile-cover" src="/media/{{ p.cover }}/full" alt="" style="object-position:{{ p.cover_x }}% {{ p.cover_y }}%">{% endif %}
-    <div class="profile-identification">
-      {% if p.avatar and not manual %}<img class="profile-avatar" src="/media/{{ p.avatar }}/thumb" alt="">{% endif %}
-      {% if p.specialty %}<span>{{ p.specialty }}</span>{% endif %}
-      <h1>{{ 'Добавить визит' if manual else p.name }}</h1>
-      {% if p.tagline and not manual %}<p>{{ p.tagline }}</p>{% endif %}
-      {% if p.address %}<p>{{ p.address }}</p>{% endif %}
-      {% if items and not manual %}<a class="button" href="#services">Записаться</a>{% endif %}
-    </div>
-  </header>
-  {% if p.description and not manual %}<p class="profile-description">{{ p.description }}</p>{% endif %}
+{% extends "master_layout.html" %}
+{% block head %}<link rel="stylesheet" href="/assets/admin.css"><link rel="stylesheet" href="/assets/calendar.css">{% endblock %}
+{% block title %}Добавить визит · Кабинет мастера{% endblock %}
+{% block desk_content %}
+{% set day = request.query_params.get('day', today) %}
+<article class="cabinet manual-visit">
+<div class="desk-heading"><h1>Добавить визит</h1><a class="button secondary" href="/admin?day={{ day|urlencode }}">К записям</a></div>
   {% if items %}
   <section id="services"><h2>Услуги</h2>
     {% for category, options in groups.items() %}
@@ -25,47 +14,21 @@
       {% endfor %}</div>
     {% endfor %}
   </section>
-  <section id="booking" hidden data-address="{{ p.address }}" data-manual="{{ 'true' if manual else 'false' }}"><h2>Время визита</h2>
-    <form id="form">
+  <section id="booking" hidden data-day="{{ day }}" data-manual="true"><h2>Время визита</h2>
+    <form id="form" autocomplete="off">
       <fieldset id="extras" hidden><legend>Дополнения</legend>
         {% for extra in extras %}<label class="extra" data-for-service="{{ extra.service_id }}" hidden><input type="checkbox" name="addons" value="{{ extra.id }}"> {{ extra.title }} · +{{ extra.price }} ₽ · {{ extra.minutes }} мин</label>{% endfor %}
       </fieldset>
       <div class="calendar"><div class="month"><button type="button" id="prev" aria-label="Предыдущий месяц">‹</button><strong id="month" aria-live="polite"></strong><button type="button" id="next" aria-label="Следующий месяц">›</button></div>
       <div class="week">{% for d in ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'] %}<span>{{ d }}</span>{% endfor %}</div><div class="dates" id="dates"></div></div>
       <h3 id="when">Начало визита</h3><div id="slots"></div><button hidden type="button" id="nearest">Ближайшая свободная дата</button>
-      <label>Ваше имя<input id="name" autocomplete="given-name" maxlength="80" required></label>
-      <label>Телефон<input id="phone" type="tel" autocomplete="tel" maxlength="24" required></label>
-      <label>Соцсеть для связи (необязательно)<input id="social" maxlength="200" placeholder="Например, Telegram @username"></label>
-      <p id="summary" aria-live="polite"></p><button id="submit" disabled>Записаться</button>
+      <h2 class="client-title">Клиент</h2><label>Имя клиента<input id="name" maxlength="80" required></label>
+      <label>Телефон<input id="phone" type="tel" maxlength="24" required></label>
+      <label>Соцсеть для связи (необязательно)<input id="social" maxlength="200" placeholder="@username"></label>
+      <p id="summary" aria-live="polite"></p><button id="submit" disabled>Сохранить визит</button>
     </form><p id="notice" role="status"></p>
   </section>
-  {% endif %}
-  {% if works %}
-  <section class="portfolio"><h2>Работы</h2>
-    <div class="portfolio-strip">
-      {% for work in works %}
-      <figure>
-        <button type="button" class="work-open" data-image="/media/{{ work.image }}/full" data-caption="{{ work.caption }}" data-book-service="{{ work.service_id if work.service_id in items|map(attribute='id')|list else '' }}" aria-label="Открыть фото {{ loop.index }}{% if work.caption %} · {{ work.caption }}{% endif %}">
-          <img src="/media/{{ work.image }}/thumb" alt="{{ work.caption }}" width="420" height="420" loading="lazy">
-        </button>
-        {% if work.caption %}<figcaption>{{ work.caption }}</figcaption>{% endif %}
-      </figure>
-      {% endfor %}
-    </div>
-    <dialog id="work-dialog" aria-label="Просмотр работы">
-      <button type="button" id="work-close" autofocus>Закрыть</button>
-      <img id="work-large" alt=""><p id="work-caption" hidden></p>
-      <button type="button" id="work-book" hidden>Записаться на эту услугу</button>
-    </dialog>
-    <script defer src="/assets/portfolio.js"></script>
-  </section>
-  {% endif %}
-  {% if not manual and (p.phone or p.links) %}
-  <footer class="profile-contacts">
-    {% if p.phone %}<a href="tel:{{ p.phone }}">Связаться с мастером · {{ p.phone }}</a>{% endif %}
-    {% for link in p.links %}<a href="{{ link.url }}" rel="noopener noreferrer">{{ link.title }}</a>{% endfor %}
-  </footer>
-  {% endif %}
+  {% else %}<section><p>Для записи нужна хотя бы одна доступная услуга.</p><a class="button" href="/admin/content">Настроить услуги</a></section>{% endif %}
 </article>
 {% if items %}<script defer src="/assets/booking.js"></script>{% endif %}
 {% endblock %}

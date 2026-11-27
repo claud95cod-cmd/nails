@@ -22,7 +22,7 @@ gallery.addEventListener('close', () => {
   opener.focus({preventScroll: true});
 });
 book.onclick = () => {
-  const target = document.querySelector('[data-service="' + opener.dataset.bookService + '"]');
+  const service = opener.dataset.bookService;
   gallery.close();
-  target?.click();
+  opener.dispatchEvent(new CustomEvent('book-portfolio', {bubbles: true, detail: Number(service)}));
 };

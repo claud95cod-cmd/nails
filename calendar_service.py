@@ -39,9 +39,10 @@ def rules(db):
     return weekly, exceptions
 
 
-def timeline(db, profile, minutes, skip=None):
+def timeline(db, profile, minutes, skip=None, *, public=False):
     zone = ZoneInfo(profile["timezone"])
     now = datetime.now(zone)
+    earliest = now + timedelta(hours=profile["lead_hours"] if public else 0)
     weekly, exceptions = rules(db)
     busy = db.execute("""SELECT starts,ends,'Занято' AS label FROM visits
         WHERE NOT cancelled AND ends>now() AND id IS DISTINCT FROM %s
@@ -57,7 +58,7 @@ def timeline(db, profile, minutes, skip=None):
         close = datetime.combine(day,hours[1],zone)
         duration = timedelta(minutes=minutes)
         while start+duration <= close:
-            if start > now:
+            if start > now and start >= earliest:
                 label = next((v["label"] for v in busy if start<v["ends"] and start+duration>v["starts"]), "")
                 options.append({"start":start.isoformat(),"status":label})
             start += timedelta(minutes=profile["step"])

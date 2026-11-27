@@ -89,7 +89,7 @@ class Service(Form):
     category: Name
     title: Name
     price: Price
-    minutes: int = Field(ge=5, le=720)
+    minutes: int = Field(ge=1, le=720)
     instructions: str = Field(default="", max_length=1500)
     position: Position = 0
     visible: bool = True
@@ -236,3 +236,96 @@ def foreground(color):
               ((channel + 0.055) / 1.055) ** 2.4 for channel in channels)
     luminance = sum(value * weight for value, weight in zip(linear, (0.2126, 0.7152, 0.0722)))
     return "#000000" if luminance > 0.179 else "#ffffff"
+
+
+class ProfileEdit(Form):
+    name: Name
+    specialty: str = Field(max_length=100)
+    city: str = Field(max_length=200)
+    description: str = Field(max_length=2000)
+    phone: str = Field(max_length=24)
+    address: str = Field(max_length=250)
+    directions: str = Field(max_length=800)
+    contact: str = Field(max_length=400)
+    avatar: Asset
+
+
+def messenger(url):
+    host = urlsplit(url).hostname
+    if host in {"t.me", "telegram.me", "telegram.dog"}:
+        return "Telegram"
+    if host in {"wa.me", "api.whatsapp.com", "chat.whatsapp.com"}:
+        return "WhatsApp"
+    return None
+
+
+def save_profile_edit(db, edit):
+    row = db.execute("SELECT * FROM profile WHERE id=1").fetchone()
+    values = {key:row[key] for key in Profile.model_fields}
+    values.update(edit.model_dump(exclude={"contact","city"}), tagline=edit.city)
+    links = values["links"].copy()
+    index = next((i for i, link in enumerate(links) if messenger(link["url"])), len(links))
+    url = edit.contact
+    if url:
+        if re.fullmatch(r"@[a-zA-Z0-9_]+", url):
+            url = "https://t.me/" + url[1:]
+        elif re.fullmatch(r"\+?[0-9 ()-]+", url) and 10 <= len(re.sub(r"\D","",url)) <= 15:
+            url = "https://wa.me/" + re.sub(r"\D","",url)
+        elif not url.startswith("https://"):
+            url = "https://" + url
+        title = messenger(url)
+        if not title:
+            raise ValueError("Укажите @username, номер с кодом страны или ссылку Telegram / WhatsApp")
+        links[index:index+1] = [{"title":title,"url":url}]
+    elif index < len(links):
+        links.pop(index)
+    values["links"] = links
+    save_profile(db, Profile(**values))
+
+
+class ServiceEdit(Form):
+    id: ItemId | None = None
+    title: Name
+    price: Price
+    minutes: int = Field(ge=1, le=720)
+    addons: list[Addon] = Field(default_factory=list, max_length=20)
+    removed: list[ItemId] = Field(default_factory=list)
+
+
+def save_service_edit(db, edit):
+    old = db.execute("SELECT * FROM services WHERE id=%s",(edit.id,)).fetchone()
+    if edit.id and not old:
+        raise ValueError("Услуга не найдена")
+    defaults = old or {"category":"Маникюр", "position":db.execute(
+        "SELECT LEAST(COALESCE(MAX(position),-1)+1,9999) AS pos FROM services").fetchone()["pos"]}
+    form = Service(**(defaults | edit.model_dump(exclude={"removed"})))
+    key = save_service(db, form)
+    if edit.removed:
+        db.execute("DELETE FROM addons WHERE service_id=%s AND id=ANY(%s)",(key, edit.removed))
+    return key
+
+
+class ServiceAction(Form):
+    action: Literal["up","down","visibility","delete"]
+    visible: bool | None = None
+
+
+def change_service(db, key, action):
+    ids = [row["id"] for row in services(db)]
+    if key not in ids:
+        raise ValueError("Услуга не найдена")
+    if action.action == "delete":
+        db.execute("UPDATE portfolio SET service_id=NULL WHERE service_id=%s",(key,))
+        db.execute("DELETE FROM addons WHERE service_id=%s",(key,))
+        db.execute("DELETE FROM services WHERE id=%s",(key,))
+    elif action.action == "visibility":
+        if action.visible is None:
+            raise ValueError("Укажите видимость услуги")
+        db.execute("UPDATE services SET visible=%s WHERE id=%s",(action.visible,key))
+    else:
+        start = ids.index(key)
+        end = start + (1 if action.action == "down" else -1)
+        if 0 <= end < len(ids):
+            ids[start], ids[end] = ids[end], ids[start]
+            db.execute("""UPDATE services SET position=r.n-1 FROM
+                unnest(%s::int[]) WITH ORDINALITY AS r(id,n) WHERE services.id=r.id""",(ids,))

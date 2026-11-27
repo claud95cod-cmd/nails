@@ -1,0 +1,35 @@
+{% set week_view = request.query_params.get('view') == 'week' %}
+{% set short = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'] %}
+{% set months = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'] %}
+<div class="planner">
+<div class="planner-views" role="navigation" aria-label="Разделы графика">
+{% for key,label in [('day','Календарь'),('week','Неделя')] %}<a href="?tab=schedule&view={{ key }}&day={{ day }}" {% if (key=='week')==week_view %}aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+</div>
+<form class="schedule-editor" data-kind="{{ 'week' if week_view else 'day' }}" data-day="{{ day }}">
+{% if week_view %}
+<section><h2>Рабочая неделя</h2>
+{% for d in week %}{% set pair=weekly.get(loop.index0) %}
+<div class="week-row" data-day="{{ d }}"><strong>{{ short[loop.index0] }}</strong><input class="toggle" type="checkbox" aria-label="{{ short[loop.index0] }} · рабочий день" {% if not pair or pair[0] %}checked{% endif %}>
+<input aria-label="{{ short[loop.index0] }} · начало" name="opens" type="time" required value="{{ pair[0].strftime('%H:%M') if pair and pair[0] else '10:00' }}"><span>—</span><input aria-label="{{ short[loop.index0] }} · конец" name="closes" type="time" required value="{{ pair[1].strftime('%H:%M') if pair and pair[1] else '18:00' }}"></div>
+{% endfor %}
+<button type="button" id="copy-week" class="secondary">Применить ко всем</button><small id="copy-source">По образцу понедельника</small></section>
+{% else %}
+<section class="month-panel"><div class="planner-heading">
+{% if prior_month %}<a class="month-arrow" aria-label="Предыдущий месяц" href="?tab=schedule&day={{ prior_month }}">‹</a>{% endif %}
+<h2>{{ months[day.month-1] }} {{ day.year }}</h2>
+{% if next_month %}<a class="month-arrow" aria-label="Следующий месяц" href="?tab=schedule&day={{ next_month }}">›</a>{% endif %}</div>
+<div class="month-grid">{% for name in short %}<small>{{ name }}</small>{% endfor %}
+{% for d in month_days %}{% set pair=exceptions.get(d,weekly.get(d.weekday())) %}{% set off=pair and not pair[0] %}
+<a href="?tab=schedule&day={{ d }}" class="{{ 'closed' if off else 'open' }}" {% if d==day %}aria-current="date"{% endif %} {% if loop.first %}style="grid-column-start:{{ d.weekday()+1 }}"{% endif %} aria-label="{{ d.strftime('%d.%m.%Y') }} · {{ 'выходной' if off else 'рабочий день' }}">{{ d.day }}</a>{% endfor %}</div>
+<div class="month-key"><span>Рабочий день</span><span>Выходной</span></div></section>
+{% set pair=exceptions.get(day,weekly.get(day.weekday())) %}
+{% set mode='inherit' if day not in exceptions else ('off' if not pair[0] else 'custom') %}
+<section><h2>{{ day.strftime('%d.%m.%Y') }}</h2><div class="day-modes">{% for value,label in [('inherit','По графику'),('custom','Своё время'),('off','Выходной')] %}<label><input type="radio" name="mode" value="{{ value }}" {% if mode==value %}checked{% endif %}>{{ label }}</label>{% endfor %}</div>
+<div class="custom-hours" {% if mode!='custom' %}hidden{% endif %}>{{ hours(pair[0] if pair else none,pair[1] if pair else none) }}</div>
+{% set base=weekly.get(day.weekday()) %}<p id="inherited" {% if mode!='inherit' %}hidden{% endif %}>По шаблону недели · {{ '10:00–18:00' if base is none else (base[0].strftime('%H:%M') ~ '–' ~ base[1].strftime('%H:%M') if base[0] else 'Выходной') }}</p></section>
+<section><h2>Перерывы</h2><div id="break-list">{% for pause in pauses %}<div class="break-edit" data-key="{{ pause.id }}"><strong>{{ pause.starts.astimezone(z).strftime('%H:%M') }}–{{ pause.ends.astimezone(z).strftime('%H:%M') }}</strong><button type="button" class="secondary" data-remove>Убрать</button></div>{% endfor %}</div>
+<button type="button" id="add-break">+ Добавить перерыв</button>
+<template id="new-break"><div class="break-edit">{{ hours(none,none) }}<button type="button" class="secondary" data-remove>Убрать</button></div></template></section>
+{% endif %}
+{% include 'schedule_save.html' %}
+</form></div>
