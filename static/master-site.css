@@ -127,9 +127,12 @@ main{width:100%;margin:0;padding:0;overflow-y:auto;scroll-padding-block:1rem}
 .price{align-items:center;justify-content:stretch;min-height:56px}
 .price-name{flex:1;min-width:0}
 .pick{display:grid;place-items:center;flex:0 0 1.35rem;height:1.35rem;border:1px solid #967181;border-radius:.34rem;color:var(--accent);font-size:1.1rem;line-height:1}
+.pick::before,.pick::after{grid-area:1/1}
 .pick::before{content:"+"}
+.pick::after{content:"✓";opacity:0;transform:scale(.8)}
 .price[aria-pressed="true"] .pick{background:var(--accent);color:#fff;border-color:var(--accent)}
-.price[aria-pressed="true"] .pick::before{content:"✓"}
+.price[aria-pressed="true"] .pick::before{opacity:0;transform:scale(.8)}
+.price[aria-pressed="true"] .pick::after{opacity:1;transform:scale(1)}
 .price[aria-pressed="true"]{background:#ecd5db}
 .selection{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.45rem .8rem;padding:.8rem 0;border-top:1px solid var(--line)}
 .selection p{margin:0;font-weight:750}
@@ -144,7 +147,7 @@ main{width:100%;margin:0;padding:0;overflow-y:auto;scroll-padding-block:1rem}
 @media(max-width:660px){
  .content{width:calc(100% - 36px)}
  .top nav a{display:flex;align-items:center;min-height:44px}
- .gallery{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:74%;gap:.6rem;overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:x mandatory;padding-bottom:.45rem}
+ .gallery{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:74%;gap:.6rem;overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:x proximity;padding-bottom:.45rem}
  .gallery figure{scroll-snap-align:start}
  .gallery img{aspect-ratio:4/3}
  .gallery figcaption{font-size:.82rem}
@@ -237,3 +240,29 @@ main{max-width:none}.top{background:none;border-radius:0}.content{padding-inline
 .visit-page{width:min(calc(100% - 2rem),46rem);margin:2rem auto;font-family:Manrope,sans-serif}
 .visit-page header{background:#ecdcd6}.visit-page h1,.visit-page h2,.visit-page h3{font-family:inherit}
 body:has(.visit-page){display:block;overflow:auto}.visit-page a{color:var(--accent)}
+
+html:has(.dock-region), main:has(.content) {scroll-behavior:smooth}
+.content .section {scroll-margin-top:.5rem}
+body:has(.content) {
+  -webkit-tap-highlight-color:transparent;
+  --tap-transition:transform 150ms ease, background-color 180ms ease, border-color 180ms ease, opacity 180ms ease;
+}
+body:has(.content) :is(button,a,label:has(input[type="checkbox"])),
+.pick,.pick::before,.pick::after {transition:var(--tap-transition)}
+body:has(.content) :is(button:enabled,a,label:has(input[type="checkbox"])):is(:active,[data-touch-pressed]) {transform:scale(.97)}
+body:has(.content) button:is(.price,.service):enabled:is(:active,[data-touch-pressed]) {transform:scale(.985)}
+.content .price[aria-pressed="true"] {background-color:#ecd5db;border-color:#79505e}
+.dock-region {
+  transition:transform 240ms cubic-bezier(.22,1,.36,1), opacity 240ms cubic-bezier(.22,1,.36,1);
+}
+@starting-style {
+  .dock-region {transform:translateY(100%);opacity:0}
+}
+body:has(dialog[open]) .dock-region {transform:translateY(100%);opacity:0;pointer-events:none}
+.photo-loading {opacity:0}
+.content img,#work-large {transition:opacity 200ms ease}
+@media (prefers-reduced-motion: reduce) {
+  html:has(.dock-region), main:has(.content) {scroll-behavior:auto}
+  body:has(.content) *, body:has(.content) ::before, body:has(.content) ::after {transition-duration:0s!important}
+  body:has(.content) :is(button,a,label):is(:active,[data-touch-pressed]) {transform:none!important}
+}

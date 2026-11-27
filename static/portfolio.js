@@ -3,10 +3,14 @@ const full = document.getElementById('work-large');
 const caption = document.getElementById('work-caption');
 const book = document.getElementById('work-book');
 let opener;
+const revealPhoto = () => full.classList.remove('photo-loading');
+full.addEventListener('load', revealPhoto);
+full.addEventListener('error', revealPhoto);
 
 for (const trigger of document.querySelectorAll('.work-open')) {
   trigger.onclick = () => {
     opener = trigger;
+    full.classList.add('photo-loading');
     full.src = trigger.dataset.image;
     full.alt = trigger.dataset.caption;
     caption.textContent = trigger.dataset.caption;

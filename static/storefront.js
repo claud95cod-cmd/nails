@@ -1,4 +1,26 @@
 const el = id => document.getElementById(id);
+let pressedControl;
+function releaseControl() {
+  pressedControl?.removeAttribute('data-touch-pressed');
+  pressedControl = null;
+}
+document.addEventListener('pointerdown', event => {
+  if (!event.isPrimary || event.pointerType !== 'touch') return;
+  releaseControl();
+  pressedControl = event.target.closest('button:enabled, a[href], label:has(input[type="checkbox"])');
+  pressedControl?.setAttribute('data-touch-pressed', '');
+}, {passive:true});
+for (const type of ['pointerup','pointercancel']) {
+  document.addEventListener(type, event => { if (event.isPrimary) releaseControl(); }, {passive:true});
+}
+window.addEventListener('blur', releaseControl);
+for (const photo of document.querySelectorAll('.content img')) {
+  if (photo.complete) continue;
+  photo.classList.add('photo-loading');
+  const reveal = () => photo.classList.remove('photo-loading');
+  photo.addEventListener('load', reveal, {once:true});
+  photo.addEventListener('error', reveal, {once:true});
+}
 const dialog = el('booking');
 const form = el('form');
 const sections = [...dialog.querySelectorAll('[data-step]')];
@@ -237,6 +259,15 @@ const rows = [...document.querySelectorAll('[data-price-service]')];
 const addons = JSON.parse(el('service-extras').textContent);
 let primary;
 const picked = new Set();
+const dock = document.querySelector('.dock');
+const dockSelection = document.createElement('div');
+const dockCount = document.createElement('small');
+const dockTotal = document.createElement('strong');
+const dockContinue = makeButton('Продолжить', continueSelection);
+const nearestControls = dock ? [...dock.children] : [];
+dockSelection.append(dockCount, dockTotal);
+dockSelection.hidden = dockContinue.hidden = true;
+dock?.append(dockSelection, dockContinue);
 const sameItem = (row, addon) => row.dataset.title === addon.title && Number(row.dataset.minutes) === addon.minutes && Number(row.dataset.price) === addon.price;
 function renderSelection() {
   const options = addons.filter(a => a.service_id === Number(primary?.dataset.priceService));
@@ -260,6 +291,12 @@ function renderSelection() {
   const minutes = selected.reduce((n,a) => n+a.minutes,Number(primary?.dataset.minutes || 0));
   el('price-total').textContent = primary ? 'Итого: ' + price.toLocaleString('ru-RU') + ' ₽ · ' + minutes + ' мин' : 'Выберите услугу';
   el('continue-selection').disabled = !primary;
+  for (const control of nearestControls) control.hidden = !!primary;
+  dockSelection.hidden = dockContinue.hidden = !primary;
+  if (primary) {
+    dockCount.textContent = 'Выбрано услуг: ' + (1 + selected.length);
+    dockTotal.textContent = price.toLocaleString('ru-RU') + ' ₽ · ' + minutes + ' мин';
+  }
 }
 function toggleAddon(addon) {
   if (picked.has(addon.id)) picked.delete(addon.id);
@@ -278,11 +315,12 @@ for (const row of rows) row.onclick = () => {
   }
   renderSelection();
 };
-el('continue-selection').onclick = () => {
-  openBooking(el('continue-selection'),'service',undefined,Number(primary.dataset.priceService),true);
+function continueSelection(event) {
+  openBooking(event.currentTarget,'service',undefined,Number(primary.dataset.priceService),true);
   for (const label of extras) label.firstElementChild.checked = !label.hidden && picked.has(Number(label.firstElementChild.value));
   if (picked.size) refresh();
-};
+}
+el('continue-selection').onclick = continueSelection;
 el('consent').onchange = updateActions;
 document.addEventListener('book-portfolio', event => openBooking(event.target, 'service', undefined, event.detail, true));
 services.forEach(button => button.addEventListener('click', () => chooseService(Number(button.dataset.service))));
