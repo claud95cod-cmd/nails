@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+<script type="module" src="/assets/tap-feedback.js"></script>
 {% set active = tab|default('visits') %}
 {% set sections = [
     ('visits', 'Записи', '/admin?tab=visits', 'M4 6h16v14H4z M7 3v5m10-5v5M4 11h16'),

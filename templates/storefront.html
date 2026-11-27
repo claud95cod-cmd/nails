@@ -12,7 +12,15 @@
 {% if items %}<section class="section" id="services"><h2>Услуги</h2>{% for s in items %}{{ price(s) }}{% endfor %}<div id="price-addons" class="price-addons"></div><div class="selection"><p id="price-total" aria-live="polite">Выберите услугу</p><button type="button" id="continue-selection" class="pill filled" disabled>Продолжить</button></div></section>{% endif %}
 <section class="section contact" id="contacts"><h2>Контакты</h2><address>{{ p.address }}</address>{% if p.directions %}<p>{{ p.directions }}</p>{% endif %}<div class="contact-actions">
 {% if p.address %}<a class="pill" href="https://yandex.ru/maps/?text={{ p.address|urlencode }}" target="_blank" rel="noopener">Открыть на карте</a>{% endif %}
-{% if p.phone %}<a class="pill" href="tel:{{ p.phone }}">{{ p.phone }}</a>{% endif %}{% for link in p.links %}<a class="pill messenger" data-messenger="{{ link.title }}" href="{{ link.url }}" rel="noopener noreferrer">{{ link.title }}</a>{% endfor %}</div>
+{% if p.phone %}<a class="pill" href="tel:{{ p.phone }}">{{ p.phone }}</a>{% endif %}
+{% for name in ['Telegram', 'WhatsApp'] %}
+  {% set link = p.links|selectattr('title','equalto',name)|first %}
+  {% if link %}<a class="pill messenger" data-messenger="{{ name }}" href="{{ link.url }}" rel="noopener noreferrer">
+  {% else %}<button class="pill messenger" data-messenger="{{ name }}" type="button" disabled>{% endif %}
+  {% if name == 'Telegram' %}<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21.6 3.3 2.8 10.6c-1 .4-1 1.1-.2 1.4l4.8 1.5 1.9 5.8c.2.6.4.8.8.8.3 0 .6-.2.9-.5l2.5-2.4 4.8 3.5c.9.5 1.5.2 1.7-.9L23 4.6c.2-1.1-.5-1.7-1.4-1.3ZM9.1 13l9.3-5.9c.5-.3.9 0 .5.3l-7.7 6.9-.3 3.4-1.8-4.7Z"/></svg>{% else %}<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" d="M20.8 11.8a8.8 8.8 0 0 1-13.1 7.7l-4.4 1.2L4.5 16a8.8 8.8 0 1 1 16.3-4.2Z"/><path fill="currentColor" d="M9 7.2c-.4-.6-1.1-.4-1.6.3-.6.8-.6 1.7 0 2.9 1.4 2.7 3.2 4.1 5.6 5.2 1.2.5 2.7.6 3.5-.4.3-.5.5-1.3.2-1.5l-2.2-1.1c-.3-.2-.5-.2-.8.1l-.7.8c-.2.2-.4.2-.6.1a8 8 0 0 1-3.2-2.9c-.1-.2-.1-.4.1-.6l.6-.7c.2-.2.2-.4.1-.7Z"/></svg>{% endif %}
+  {{ name }}{% if link %}</a>{% else %}<small>Демо</small></button>{% endif %}
+{% endfor %}
+{% for link in p.links if link.title not in ['Telegram', 'WhatsApp'] %}<a class="pill" href="{{ link.url }}" rel="noopener noreferrer">{{ link.title }}</a>{% endfor %}</div>
 <button id="install" class="install" type="button">Добавить на экран телефона</button><a class="privacy-link" href="/privacy">Политика обработки персональных данных</a></section>
 </div></main>
 {% if items %}<footer class="dock-region"><div class="dock"><div><small>Ближайшая запись</small>{% if windows_by_day %}{% set slot=windows_by_day[0][1][0] %}<button class="dock-time" data-booking-entry="time" data-start="{{ slot }}">{{ slot[8:10] }}.{{ slot[5:7] }}, {{ slot[11:16] }}</button>{% else %}<strong>Нет свободных окон</strong>{% endif %}</div><button data-booking-entry="time" aria-label="Открыть календарь">Выбрать время</button></div></footer>

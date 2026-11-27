@@ -258,6 +258,13 @@ body:has(.content) button:is(.price,.service):enabled:is(:active,[data-touch-pre
 @starting-style {
   .dock-region {transform:translateY(100%);opacity:0}
 }
+#booking [data-step="time"][aria-busy="true"] .dates {
+  height:14rem;
+  background:radial-gradient(circle, #e6dade 0 .72rem, transparent .77rem) 0 0 / calc(100% / 7) 20%;
+}
+#booking {height:min(82dvh,48rem);overflow:hidden}
+#booking .booking-panel {height:100%}
+#booking .booking-heading,#booking .booking-actions {flex:none}
 body:has(dialog[open]) .dock-region {transform:translateY(100%);opacity:0;pointer-events:none}
 .photo-loading {opacity:0}
 .content img,#work-large {transition:opacity 200ms ease}

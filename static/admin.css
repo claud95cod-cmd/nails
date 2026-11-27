@@ -115,3 +115,17 @@ details[open] .expand{transform:rotate(180deg)}
 .schedule-editor .secondary{background:white;border:1px solid var(--line);color:var(--accent)}
 .break-edit{margin:.5rem 0}
 .schedule-editor output{margin:.5rem 0}
+.master-desk,.master-login { -webkit-tap-highlight-color:transparent }
+:is(.master-desk,.master-login) :is(button,a,summary,label:has(input:is([type="radio"],[type="checkbox"])),.toggle) {
+  transition:transform 150ms ease, background-color 180ms ease, border-color 180ms ease, opacity 180ms ease;
+}
+:is(.master-desk,.master-login) :is(button:enabled,a,summary,label:has(input:enabled:is([type="radio"],[type="checkbox"])),.toggle:enabled):is(:active,[data-touch-pressed]) {
+  transform:scale(.97);
+}
+@media(prefers-reduced-motion:no-preference) {
+  html:has(.master-desk),.desk-body {scroll-behavior:smooth}
+}
+@media(prefers-reduced-motion:reduce) {
+  :is(.master-desk,.master-login) :is(button,a,summary,label,.toggle) {transition:none!important}
+  :is(.master-desk,.master-login) :is(button,a,summary,label,.toggle):is(:active,[data-touch-pressed]) {transform:none!important}
+}
