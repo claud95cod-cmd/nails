@@ -23,7 +23,8 @@ import push
 from catalog import PortfolioItem, Profile, photo_variants, save_profile, save_work, store_photo
 from configure import settings
 from starter import import_starter
-from storage import ROOT, connect, initialize
+from storage import ROOT, connect
+from sample_catalog import initialize
 
 KIT = ROOT / "starter-kit/profile.json"
 
@@ -165,22 +166,22 @@ def test_two_instances(monkeypatch, tmp_path, record_property):
 
         first_site.goto(nails)
         second_site.goto(lashes)
-        first_site.get_by_role("heading", name="Студия Лины").wait_for()
+        first_site.get_by_role("heading", name="Тестовый мастер").wait_for()
         second_site.get_by_role("heading", name="Студия Ивы · ресницы").wait_for()
-        assert first_site.locator(".profile-page").get_attribute("data-fonts") == "classic"
+
         assert first_site.get_by_role("link", name="Страница Лины").get_attribute("href") == "https://example.org/nails"
-        original_nails_cover = first_site.locator(".profile-cover").get_attribute("src")
+        original_nails_cover = first_site.locator(".gallery img[src]").first.get_attribute("src")
         assert api.get(nails + original_nails_cover).ok and api.get(lashes + original_nails_cover).status == 404
-        assert second_site.locator(".profile-page").get_attribute("data-fonts") == "modern"
+
         assert second_site.get_by_role("link", name="Страница студии").get_attribute("href") == "https://example.org/iva-studio"
         assert first_site.locator("#services").get_by_role("button", name="Маникюр").count() == 1
         assert second_site.get_by_role("button", name="Ламинирование").count() == 1
         assert first_site.locator("figcaption").inner_text() == "Маникюр Лины"
         assert second_site.locator("figcaption").inner_text() == "Классика с натуральным изгибом"
         background = "(node) => getComputedStyle(node).backgroundColor"
-        assert first_site.locator(".profile-page").evaluate(background) == "rgb(252, 248, 245)"
-        assert second_site.locator(".profile-page").evaluate(background) == "rgb(240, 237, 247)"
-        initial_cover = second_site.locator(".profile-cover").get_attribute("src")
+        assert first_site.locator("html").evaluate(background) == "rgb(245, 238, 233)"
+        assert second_site.locator("html").evaluate(background) == "rgb(245, 238, 233)"
+        initial_cover = second_site.locator(".gallery img[src]").first.get_attribute("src")
         assert api.get(lashes + initial_cover).ok and api.get(nails + initial_cover).status == 404
         assert api.get(nails + "/slots").json()["price"] == 2000
         quote = api.get(lashes + "/slots?service=1&addons=1&addons=2").json()
@@ -206,8 +207,8 @@ def test_two_instances(monkeypatch, tmp_path, record_property):
         assert stale.status == 409 and "Длительность изменилась" in stale.json()["detail"]
         first_site.reload()
         second_site.reload()
-        assert first_site.locator(".profile-cover").get_attribute("src") == original_nails_cover
-        assert second_site.locator(".profile-cover").get_attribute("src") == initial_cover
+        assert first_site.locator(".gallery img[src]").first.get_attribute("src") == original_nails_cover
+        assert second_site.locator(".gallery img[src]").first.get_attribute("src") == initial_cover
 
         master.get_by_role("link", name="Портфолио",exact=True).click()
         caption = master.get_by_label("Подпись к фото").first
@@ -306,3 +307,21 @@ def test_two_instances(monkeypatch, tmp_path, record_property):
                 assert "2900 ₽" in response.read().decode()
     finally:
         stop(restored_data)
+
+
+def test_new_demo_uses_approved_catalog(monkeypatch, tmp_path):
+    from storage import initialize as initialize_release
+    base = os.environ["DATABASE_URL"]
+    assert os.environ.get("TEST_DISPOSABLE_DATABASE") == "1"
+    database = "demo_" + uuid.uuid4().hex
+    with psycopg.connect(base, autocommit=True) as db:
+        db.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(database)))
+    monkeypatch.setenv("DATABASE_URL", make_conninfo(base, dbname=database))
+    monkeypatch.setenv("MEDIA_DIR", str(tmp_path))
+    initialize_release()
+    initialize_release()
+    with connect() as db:
+        profile = db.execute("SELECT name,address FROM profile").fetchone()
+        assert profile == {"name":"Лина", "address":"Ульяновск, ул. Карла Маркса 1"}
+        assert db.execute("SELECT count(*) AS n FROM services").fetchone()["n"] == 4
+        assert db.execute("SELECT count(*) AS n FROM portfolio").fetchone()["n"] == 4

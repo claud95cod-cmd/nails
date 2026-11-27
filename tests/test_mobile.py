@@ -6,7 +6,7 @@ import time
 from urllib.request import urlopen
 
 from playwright.sync_api import sync_playwright
-from storage import initialize
+from sample_catalog import initialize
 
 
 def test_mobile_booking(tmp_path):

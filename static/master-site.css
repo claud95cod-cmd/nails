@@ -1,5 +1,39 @@
+@font-face {
+  font-family: Manrope;
+  src: url('/assets/Manrope.ttf') format('truetype');
+  font-weight: 200 800;
+  font-display: swap;
+}
+.booking-panel, #form {display: flex; flex-direction: column; min-height: 0}
+.booking-panel {height: 100%}
+.booking-heading {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr 2.75rem;
+  align-items: center;
+  text-align: center;
+  border-bottom: 1px solid var(--line);
+  padding: .7rem 1rem;
+}
+.booking-heading :is(h2,p) {margin: 0}
+.booking-heading h2 {font-size: 1.4rem}
+#booking-progress {font-size: .8rem}
+#booking-back[hidden] {visibility: hidden; display: block!important}
+.booking-heading .text-button {font-size: 1.35rem}
+#form {flex: 1}
+.booking-body {overflow-y: auto; padding: .85rem 1rem 1rem; flex: 1; overscroll-behavior: contain}
+.booking-actions {display: grid; padding: .75rem 1rem max(.75rem,env(safe-area-inset-bottom)); border-top: 1px solid var(--line)}
+.booking-actions p {margin: 0 0 .55rem; text-align: center; font-weight: 700}
+.booking-actions button {font-weight: 750}
+.booking-summary, #time-context {background: #f2e5df; border-radius: .75rem; padding: .8rem; margin: 0; white-space: pre-line}
+#booking .calendar {max-width: none; box-shadow: none; padding: .7rem}
+#booking .month button {min-width: 2.75rem; color: var(--ink); background: transparent; border: 1px solid var(--line)}
+#booking :is(.dates,#slots) button {min-width: 0}
+#booking #slots {display: grid; grid-template-columns: repeat(3,minmax(0,1fr))}
+#booking #extras {margin: 1rem 0 0}
+#booking #extras legend {font-weight: 750}
+#notice {margin: .8rem 0 0}
 
-:root{font:16px/1.5 Manrope,sans-serif;color:#2c2025;background:var(--profile-bg);--ink:#2c2025;--accent:#562c3d;--line:#d9ccc5;--paper:#fff9f5;--muted:#64515a}
+:root{font:16px/1.5 Manrope,sans-serif;color:#2c2025;background:#f5eee9;--ink:#2c2025;--accent:#562c3d;--line:#d9ccc5;--paper:#fff9f5;--muted:#64515a}
 *{box-sizing:border-box}
 body{margin:0}
 body:has(dialog[open]){overflow:hidden}
@@ -85,7 +119,7 @@ body{height:100vh;height:100dvh;display:grid;grid-template-rows:minmax(0,1fr) au
 html{overflow:hidden}
 main{width:100%;margin:0;padding:0;overflow-y:auto;scroll-padding-block:1rem}
 .content{width:min(100% - 96px,70rem);margin:auto;padding-bottom:clamp(2rem,6vw,4rem)}
-.dock-region{display:grid;justify-items:center;background:var(--profile-bg);border-top:1px solid var(--line);padding:.35rem .75rem max(.35rem,env(safe-area-inset-bottom))}
+.dock-region{display:grid;justify-items:center;background:#f5eee9;border-top:1px solid var(--line);padding:.35rem .75rem max(.35rem,env(safe-area-inset-bottom))}
 .dock{position:static;transform:none;width:min(100%,27rem);padding:.2rem .25rem .2rem .9rem;box-shadow:none}
 .dock button{padding-inline:.75rem;font-size:.86rem;min-height:44px}
 .dock strong{font-size:.9rem}
@@ -183,16 +217,23 @@ label textarea:focus-visible{outline:3px solid #a25b72;outline-offset:3px}
  .top nav a{padding:.35rem .65rem}
 }
 
-main{max-width:none}.top{background:none;border-radius:0}.content.profile-page{padding-inline:0;border-radius:0}.profile-cover{max-width:100%;object-fit:cover}
-.gallery .work-open{display:block;border:0;background:none;padding:0;width:100%}.gallery img{height:auto}.profile-page .master h1{font-family:inherit}.section{border-bottom:0}.hero-actions .pill:not(.filled){background:transparent;color:var(--accent)}
+main{max-width:none}.top{background:none;border-radius:0}.content{padding-inline:0;border-radius:0}
+.gallery .work-open{display:block;border:0;background:none;padding:0;width:100%}.gallery img{height:auto}.master h1{font-family:inherit}.section{border-bottom:0}.hero-actions .pill:not(.filled){background:transparent;color:var(--accent)}
 .section .price,.panel .price{border-radius:0;color:var(--ink);background:transparent}.price[aria-pressed=true]{background:#ecd5db}.section small{display:block}
 #booking{position:fixed;inset:0;margin:auto;width:min(32rem,94vw);height:fit-content;max-height:90dvh;border-radius:1.4rem;background:var(--paper);overflow:auto}
 #booking .booking-panel{max-height:90dvh}.booking-body{min-height:0}.booking-heading{padding:.8rem}.booking-heading h2{font:700 1.4rem Manrope,sans-serif}.privacy-consent{display:flex;align-items:start;gap:.6rem}.privacy-consent input{min-height:20px;width:20px;height:20px;flex:none}.privacy-consent a,.privacy-link{text-decoration:underline}.privacy-link{display:inline-block;margin:1rem}
 #booking .extra[hidden]{display:none}.dock .dock-time{padding:0;background:transparent;color:inherit;min-height:0;text-align:left}.price-addons{display:flex;gap:.6rem;flex-wrap:wrap}.price-addons label{display:flex;align-items:center;gap:.3rem}
 @media(max-width:660px){#booking{inset:auto 0 0;margin:0;width:100%;border-radius:1.35rem 1.35rem 0 0}}
 
-.content.profile-page{padding-top:0;font-family:Manrope,sans-serif}
-.content.profile-page:is([data-fonts]) :is(h1,h2,h3),dialog :is(h1,h2,h3){font-family:Manrope,sans-serif;font-weight:750}
-.content.profile-page .master h1{font-weight:780}
+.content{padding-top:0;font-family:Manrope,sans-serif}
+.content :is(h1,h2,h3),dialog :is(h1,h2,h3){font-family:Manrope,sans-serif;font-weight:750}
+.content .master h1{font-weight:780}
 .booking-heading .text-button{background:transparent;color:var(--ink);min-height:44px}
 .privacy-consent input{accent-color:var(--accent)}
+
+#work-dialog{max-width:min(38rem,94vw);padding:.9rem}
+#work-large{display:block;width:100%;max-height:64dvh;object-fit:contain;margin:.7rem 0}
+#work-close,#work-book,.booking-actions button{background:var(--accent);color:white}
+.visit-page{width:min(calc(100% - 2rem),46rem);margin:2rem auto;font-family:Manrope,sans-serif}
+.visit-page header{background:#ecdcd6}.visit-page h1,.visit-page h2,.visit-page h3{font-family:inherit}
+body:has(.visit-page){display:block;overflow:auto}.visit-page a{color:var(--accent)}

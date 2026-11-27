@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block title %}{{ ('Запись отменена' if v.cancelled else 'Вы записаны') }} · {{ p.name }}{% endblock %}
-{% block head %}<link rel="stylesheet" href="/assets/profile.css"><link rel="stylesheet" href="/assets/storefront.css">{% endblock %}
+{% block head %}<link rel="stylesheet" href="/assets/master-site.css">{% endblock %}
 {% block content %}
-<article class="storefront profile-page visit-page" style="--profile-bg:{{ p.background }};--profile-ink:{{ foreground(p.background) }};--profile-accent:{{ p.accent }};--profile-on-accent:{{ foreground(p.accent) }}">
+<article class="visit-page">
   <header class="studio-intro">
     <div class="studio-details">
       <p>{{ p.name }}</p>

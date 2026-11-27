@@ -21,16 +21,11 @@ def initialize(demo=True):
         db.execute("SELECT pg_advisory_xact_lock(714531)")
         db.execute((ROOT / "schema.sql").read_text("utf-8"))
         inserted = db.execute("""INSERT INTO profile(id,name,address,phone,timezone,directions,specialty)
-            VALUES (1,%s,%s,%s,'Europe/Astrakhan',%s,%s) ON CONFLICT DO NOTHING RETURNING id""",
-            ('Студия Лины', 'Астрахань, ул. Цветочная, 7', '+70000000000',
-             'Вход со двора, первый этаж', 'Студия маникюра') if demo else
-            ('Онлайн-запись', '', '', '', '')).fetchone()
+            VALUES (1,'Онлайн-запись','','','Europe/Ulyanovsk','','')
+            ON CONFLICT DO NOTHING RETURNING id""").fetchone()
         if demo and inserted:
-            db.execute("""INSERT INTO services(id,title,price,minutes,instructions)
-                VALUES (1,'Маникюр с покрытием',2000,90,
-                'Если потребуется снятие покрытия, заранее свяжитесь с мастером.')""")
-            db.execute("""INSERT INTO addons(id,service_id,title,price,minutes)
-                VALUES (1,1,'Снятие покрытия',300,15)""")
+            from starter import apply_starter, load_starter
+            apply_starter(db, *load_starter(ROOT / "starter-kit/ulyanovsk/profile.json"))
 
 
 def windows(db, profile, service):

@@ -82,13 +82,17 @@ def import_starter(config):
             OR step <> 60 OR horizon <> 30 OR lead_hours <> 0 AS occupied FROM profile WHERE id=1""").fetchone()
         if not row or row["occupied"]:
             raise ValueError("Импорт доступен только для пустого экземпляра")
-        for key, variants in prepared.items():
-            store_photo(key, variants, db=db)
-        save_profile(db, profile)
-        ids = [save_service(db, service) for service in catalog]
-        for work, index in works:
-            work.service_id = ids[index - 1] if index else None
-            save_work(db, work)
+        apply_starter(db, profile, catalog, works, prepared)
+
+
+def apply_starter(db, profile, catalog, works, prepared):
+    for key, variants in prepared.items():
+        store_photo(key, variants, db=db)
+    save_profile(db, profile)
+    ids = [save_service(db, service) for service in catalog]
+    for work, index in works:
+        work.service_id = ids[index - 1] if index else None
+        save_work(db, work)
 
 
 if __name__ == "__main__":

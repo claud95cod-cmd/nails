@@ -7,7 +7,8 @@ from zoneinfo import ZoneInfo
 import pytest
 from fastapi.testclient import TestClient
 from main import app
-from storage import connect, initialize
+from storage import connect
+from sample_catalog import initialize
 
 
 @pytest.fixture

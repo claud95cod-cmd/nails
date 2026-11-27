@@ -8,7 +8,8 @@ from fastapi.testclient import TestClient
 
 import push
 from main import app
-from storage import connect, initialize
+from storage import connect
+from sample_catalog import initialize
 
 @pytest.fixture(scope="module")
 def client():
@@ -24,7 +25,7 @@ def payload(c):
 
 
 def test_path_and_retry(client):
-    assert "Студия Лины" in client.get("/").text
+    assert "Тестовый мастер" in client.get("/").text
     item=payload(client)
     assert client.get("/privacy").status_code == 200
     assert client.post("/book",json={**item,"consent_version":None}).status_code == 422

@@ -3,6 +3,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY *.py schema.sql ./
+COPY starter-kit/ulyanovsk starter-kit/ulyanovsk
 COPY templates templates
 COPY static static
 RUN install -d -o 65534 -g 65534 /var/lib/booking-media
