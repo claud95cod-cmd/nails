@@ -106,7 +106,13 @@ function renderCalendar() {
       grid.append(control);
     }
   }
-  renderTimes();
+  if (loading) {
+    el('slots').replaceChildren();
+    el('when').textContent = 'Начало визита';
+    el('nearest').hidden = true;
+  } else {
+    renderTimes();
+  }
 }
 
 function renderTimes() {
@@ -146,12 +152,9 @@ async function refresh() {
   quote = null;
   days = {};
   if (step === 'time') {
-    el('dates').replaceChildren();
-    el('slots').replaceChildren();
-    el('month').textContent = '';
-    el('when').textContent = 'Начало визита';
-    el('prev').disabled = el('next').disabled = true;
-    el('nearest').hidden = true;
+    const nearestStart = document.querySelector('.dock-time')?.dataset.start;
+    month = (day || nearestStart || today).slice(0, 7);
+    renderCalendar();
   }
   status('Загружаем свободные окошки…');
   updateActions();
@@ -170,7 +173,7 @@ async function refresh() {
     if (step === 'time') {
       if (hasTime()) day = start.slice(0, 10);
       if (!(day in days)) day = data.times[0]?.slice(0, 10) || Object.keys(days)[0];
-      month = day?.slice(0, 7);
+      month = (day || today).slice(0, 7);
       renderCalendar();
     } else if (step === 'service' && order[0] === 'time' && !hasTime()) {
       status('Услуга с выбранными дополнениями не помещается в это окошко. Выберите другую услугу или вернитесь к календарю.');
